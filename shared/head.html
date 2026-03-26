@@ -1,0 +1,72 @@
+<!-- GeoForecast Dashboard - Shared Head Template -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Global Threat Intelligence & Prediction Dashboard - Real-time geopolitical threat analysis using game theory, astrology patterns, and data-driven forecasting">
+<meta name="keywords" content="geopolitical, threat intelligence, prediction, forecasting, game theory, risk analysis">
+<meta name="author" content="GeoForecast">
+
+<!-- Favicon -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%231E3A5F'/><circle cx='50' cy='50' r='35' fill='none' stroke='%237C3AED' stroke-width='3'/><circle cx='50' cy='50' r='15' fill='%237C3AED'/></svg>">
+
+<!-- Tailwind CSS v4 -->
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+<!-- Lucide Icons -->
+<script src="https://unpkg.com/lucide@latest"></script>
+
+<!-- Three.js (for 3D globe - High/Medium bandwidth only) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<!-- D3.js (for data visualizations) -->
+<script src="https://d3js.org/d3.v7.min.js"></script>
+
+<!-- Chart.js (for charts) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Google Fonts - Inter -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Shared Styles -->
+<link rel="stylesheet" href="shared/styles.css">
+
+<!-- Bandwidth Detection (Early) -->
+<script>
+  (function() {
+    // Early bandwidth detection to prevent unnecessary resource loading
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    let bandwidthMode = 'high';
+    
+    if (connection) {
+      const effectiveType = connection.effectiveType;
+      const saveData = connection.saveData;
+      
+      if (saveData || effectiveType === '2g' || effectiveType === 'slow-2g') {
+        bandwidthMode = 'low';
+      } else if (effectiveType === '3g') {
+        bandwidthMode = 'medium';
+      }
+    }
+    
+    // Check for saved preference
+    const savedMode = localStorage.getItem('geoForecast_bandwidth');
+    if (savedMode) {
+      bandwidthMode = savedMode;
+    }
+    
+    // Check URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlMode = urlParams.get('bandwidth');
+    if (urlMode && ['high', 'medium', 'low'].includes(urlMode)) {
+      bandwidthMode = urlMode;
+    }
+    
+    // Store for use by other scripts
+    window.__BANDWIDTH_MODE__ = bandwidthMode;
+    document.documentElement.setAttribute('data-bandwidth', bandwidthMode);
+    
+    // Apply bandwidth class immediately
+    document.documentElement.classList.add('bandwidth-' + bandwidthMode);
+  })();
+</script>

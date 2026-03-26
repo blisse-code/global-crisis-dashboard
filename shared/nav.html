@@ -1,0 +1,571 @@
+<!-- GeoForecast Dashboard - Sidebar Navigation Component -->
+<!-- Copy this entire block into your page's body, after the header -->
+
+<!-- Mobile Menu Toggle Button (visible only on mobile/tablet) -->
+<button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+  <i data-lucide="menu" class="mobile-menu-toggle__icon"></i>
+</button>
+
+<!-- Sidebar Overlay (visible on mobile when menu is open) -->
+<div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+<!-- Sidebar Navigation -->
+<aside id="sidebar" class="sidebar" role="navigation" aria-label="Main navigation">
+  <!-- Sidebar Header / Logo -->
+  <div class="sidebar__header">
+    <a href="index.html" class="sidebar__logo">
+      <div class="sidebar__logo-icon">
+        <svg viewBox="0 0 100 100" width="40" height="40" aria-hidden="true">
+          <circle cx="50" cy="50" r="45" fill="#1E3A5F"/>
+          <circle cx="50" cy="50" r="35" fill="none" stroke="#7C3AED" stroke-width="3"/>
+          <circle cx="50" cy="50" r="15" fill="#7C3AED"/>
+        </svg>
+      </div>
+      <div class="sidebar__logo-text">
+        <span class="sidebar__logo-title">GeoForecast</span>
+        <span class="sidebar__logo-subtitle">Threat Intelligence</span>
+      </div>
+    </a>
+    
+    <!-- Close button for mobile -->
+    <button id="sidebar-close" class="sidebar__close" aria-label="Close navigation menu">
+      <i data-lucide="x" class="sidebar__close-icon"></i>
+    </button>
+  </div>
+
+  <!-- Navigation Menu -->
+  <nav class="sidebar__nav">
+    <ul class="sidebar__menu" role="menubar">
+      <!-- Global Overview -->
+      <li class="sidebar__item" role="none">
+        <a href="index.html" 
+           class="sidebar__link" 
+           data-page="index"
+           role="menuitem"
+           aria-current="page">
+          <span class="sidebar__link-icon">
+            <i data-lucide="globe" aria-hidden="true"></i>
+          </span>
+          <span class="sidebar__link-text">Global Overview</span>
+        </a>
+      </li>
+
+      <!-- Predictions -->
+      <li class="sidebar__item" role="none">
+        <a href="predictions.html" 
+           class="sidebar__link" 
+           data-page="predictions"
+           role="menuitem">
+          <span class="sidebar__link-icon">
+            <i data-lucide="brain" aria-hidden="true"></i>
+          </span>
+          <span class="sidebar__link-text">Predictions</span>
+        </a>
+      </li>
+
+      <!-- Timeline -->
+      <li class="sidebar__item" role="none">
+        <a href="timeline.html" 
+           class="sidebar__link" 
+           data-page="timeline"
+           role="menuitem">
+          <span class="sidebar__link-icon">
+            <i data-lucide="calendar" aria-hidden="true"></i>
+          </span>
+          <span class="sidebar__link-text">Timeline</span>
+        </a>
+      </li>
+
+      <!-- Alert Center -->
+      <li class="sidebar__item" role="none">
+        <a href="alerts.html" 
+           class="sidebar__link" 
+           data-page="alerts"
+           role="menuitem">
+          <span class="sidebar__link-icon">
+            <i data-lucide="bell" aria-hidden="true"></i>
+          </span>
+          <span class="sidebar__link-text">Alert Center</span>
+          <span id="alert-badge" class="sidebar__badge" aria-label="Unread alerts">0</span>
+        </a>
+      </li>
+
+      <!-- Settings -->
+      <li class="sidebar__item" role="none">
+        <a href="settings.html" 
+           class="sidebar__link" 
+           data-page="settings"
+           role="menuitem">
+          <span class="sidebar__link-icon">
+            <i data-lucide="settings" aria-hidden="true"></i>
+          </span>
+          <span class="sidebar__link-text">Settings</span>
+        </a>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- Sidebar Footer -->
+  <div class="sidebar__footer">
+    <!-- Bandwidth Indicator -->
+    <div class="sidebar__bandwidth" id="bandwidth-indicator">
+      <span class="sidebar__bandwidth-label">Mode:</span>
+      <span class="sidebar__bandwidth-value" id="bandwidth-value">Auto</span>
+    </div>
+    
+    <!-- User Profile (optional) -->
+    <div class="sidebar__user">
+      <div class="sidebar__user-avatar">
+        <i data-lucide="user" aria-hidden="true"></i>
+      </div>
+      <div class="sidebar__user-info">
+        <span class="sidebar__user-name">Guest User</span>
+        <span class="sidebar__user-role">Analyst</span>
+      </div>
+    </div>
+    
+    <!-- Version Info -->
+    <div class="sidebar__version">
+      <span>v1.0.0</span>
+    </div>
+  </div>
+</aside>
+
+<!-- Sidebar Styles (add to your CSS or keep inline) -->
+<style>
+  /* Mobile Menu Toggle */
+  .mobile-menu-toggle {
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 150;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-md);
+    background: var(--color-card-bg);
+    box-shadow: var(--shadow-md);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-fast);
+  }
+
+  .mobile-menu-toggle:hover {
+    background: var(--color-bg-alt);
+  }
+
+  .mobile-menu-toggle__icon {
+    width: 24px;
+    height: 24px;
+    color: var(--color-text-primary);
+  }
+
+  /* Sidebar Overlay */
+  .sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 90;
+    opacity: 0;
+    visibility: hidden;
+    transition: var(--transition-normal);
+  }
+
+  .sidebar-overlay.is-open {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: var(--sidebar-width);
+    height: 100vh;
+    background: var(--color-card-bg);
+    border-right: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    transition: transform var(--duration-normal) var(--ease-default);
+  }
+
+  /* Sidebar Header */
+  .sidebar__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-6) var(--space-4);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .sidebar__logo {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .sidebar__logo-icon {
+    flex-shrink: 0;
+  }
+
+  .sidebar__logo-text {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sidebar__logo-title {
+    font-size: var(--text-body);
+    font-weight: var(--font-bold);
+    color: var(--color-text-primary);
+    line-height: 1.2;
+  }
+
+  .sidebar__logo-subtitle {
+    font-size: var(--text-caption);
+    color: var(--color-text-muted);
+    line-height: 1.2;
+  }
+
+  .sidebar__close {
+    display: none;
+    padding: var(--space-2);
+    color: var(--color-text-muted);
+    transition: var(--transition-fast);
+  }
+
+  .sidebar__close:hover {
+    color: var(--color-text-primary);
+  }
+
+  .sidebar__close-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  /* Sidebar Navigation */
+  .sidebar__nav {
+    flex: 1;
+    padding: var(--space-4);
+    overflow-y: auto;
+  }
+
+  .sidebar__menu {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .sidebar__link {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-lg);
+    color: var(--color-text-secondary);
+    transition: var(--transition-fast);
+    position: relative;
+  }
+
+  .sidebar__link::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 0;
+    background: var(--color-secondary);
+    border-radius: 0 var(--radius-full) var(--radius-full) 0;
+    transition: height var(--duration-fast) var(--ease-default);
+  }
+
+  .sidebar__link:hover {
+    background: var(--color-bg-alt);
+    color: var(--color-text-primary);
+  }
+
+  .sidebar__link.is-active,
+  .sidebar__link[aria-current="page"] {
+    background: var(--color-bg-alt);
+    color: var(--color-text-primary);
+  }
+
+  .sidebar__link.is-active::before,
+  .sidebar__link[aria-current="page"]::before {
+    height: 24px;
+  }
+
+  .sidebar__link-icon {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .sidebar__link-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .sidebar__link-text {
+    font-size: var(--text-body);
+    font-weight: var(--font-medium);
+  }
+
+  .sidebar__badge {
+    margin-left: auto;
+    padding: var(--space-1) var(--space-2);
+    background: var(--color-alert-critical);
+    color: var(--color-text-light);
+    font-size: var(--text-caption);
+    font-weight: var(--font-semibold);
+    border-radius: var(--radius-full);
+    min-width: 20px;
+    text-align: center;
+  }
+
+  .sidebar__badge:empty,
+  .sidebar__badge[data-count="0"] {
+    display: none;
+  }
+
+  /* Sidebar Footer */
+  .sidebar__footer {
+    padding: var(--space-4);
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .sidebar__bandwidth {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: var(--color-bg-alt);
+    border-radius: var(--radius-md);
+    font-size: var(--text-caption);
+  }
+
+  .sidebar__bandwidth-label {
+    color: var(--color-text-muted);
+  }
+
+  .sidebar__bandwidth-value {
+    font-weight: var(--font-semibold);
+    color: var(--color-primary);
+    text-transform: capitalize;
+  }
+
+  .sidebar__user {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    border-radius: var(--radius-lg);
+    transition: var(--transition-fast);
+  }
+
+  .sidebar__user:hover {
+    background: var(--color-bg-alt);
+  }
+
+  .sidebar__user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-full);
+    background: var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-light);
+  }
+
+  .sidebar__user-avatar svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .sidebar__user-info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sidebar__user-name {
+    font-size: var(--text-body-sm);
+    font-weight: var(--font-semibold);
+    color: var(--color-text-primary);
+  }
+
+  .sidebar__user-role {
+    font-size: var(--text-caption);
+    color: var(--color-text-muted);
+  }
+
+  .sidebar__version {
+    text-align: center;
+    font-size: var(--text-caption);
+    color: var(--color-text-muted);
+  }
+
+  /* Responsive Styles */
+  @media (max-width: 1023px) {
+    .mobile-menu-toggle {
+      display: flex;
+    }
+
+    .sidebar {
+      transform: translateX(-100%);
+    }
+
+    .sidebar.is-open {
+      transform: translateX(0);
+    }
+
+    .sidebar__close {
+      display: flex;
+    }
+  }
+
+  @media (max-width: 639px) {
+    .sidebar {
+      width: 100%;
+    }
+
+    .sidebar__user {
+      display: none;
+    }
+  }
+</style>
+
+<!-- Sidebar JavaScript (add before closing body tag) -->
+<script>
+  (function() {
+    // DOM Elements
+    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+    const sidebarClose = document.getElementById('sidebar-close');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.getElementById('sidebar-overlay');
+    const bandwidthValue = document.getElementById('bandwidth-value');
+
+    // Update bandwidth indicator
+    function updateBandwidthIndicator() {
+      if (bandwidthValue) {
+        const mode = window.__BANDWIDTH_MODE__ || 'high';
+        bandwidthValue.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
+      }
+    }
+
+    // Open sidebar
+    function openSidebar() {
+      sidebar.classList.add('is-open');
+      sidebarOverlay.classList.add('is-open');
+      mobileMenuToggle.setAttribute('aria-expanded', 'true');
+      document.body.style.overflow = 'hidden';
+    }
+
+    // Close sidebar
+    function closeSidebar() {
+      sidebar.classList.remove('is-open');
+      sidebarOverlay.classList.remove('is-open');
+      mobileMenuToggle.setAttribute('aria-expanded', 'false');
+      document.body.style.overflow = '';
+    }
+
+    // Toggle sidebar
+    function toggleSidebar() {
+      if (sidebar.classList.contains('is-open')) {
+        closeSidebar();
+      } else {
+        openSidebar();
+      }
+    }
+
+    // Set active nav item based on current page
+    function setActiveNavItem() {
+      const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+      const navLinks = document.querySelectorAll('.sidebar__link');
+      
+      navLinks.forEach(link => {
+        const linkPage = link.getAttribute('href');
+        if (linkPage === currentPage || (currentPage === '' && linkPage === 'index.html')) {
+          link.classList.add('is-active');
+          link.setAttribute('aria-current', 'page');
+        } else {
+          link.classList.remove('is-active');
+          link.removeAttribute('aria-current');
+        }
+      });
+    }
+
+    // Update alert badge
+    function updateAlertBadge(count) {
+      const badge = document.getElementById('alert-badge');
+      if (badge) {
+        badge.textContent = count;
+        badge.setAttribute('data-count', count);
+        if (count > 0) {
+          badge.style.display = 'block';
+        } else {
+          badge.style.display = 'none';
+        }
+      }
+    }
+
+    // Event listeners
+    if (mobileMenuToggle) {
+      mobileMenuToggle.addEventListener('click', toggleSidebar);
+    }
+
+    if (sidebarClose) {
+      sidebarClose.addEventListener('click', closeSidebar);
+    }
+
+    if (sidebarOverlay) {
+      sidebarOverlay.addEventListener('click', closeSidebar);
+    }
+
+    // Close sidebar on escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && sidebar.classList.contains('is-open')) {
+        closeSidebar();
+      }
+    });
+
+    // Close sidebar when clicking on a nav link (mobile)
+    const navLinks = document.querySelectorAll('.sidebar__link');
+    navLinks.forEach(link => {
+      link.addEventListener('click', function() {
+        if (window.innerWidth < 1024) {
+          closeSidebar();
+        }
+      });
+    });
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+      setActiveNavItem();
+      updateBandwidthIndicator();
+      
+      // Initialize Lucide icons
+      if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+      }
+    });
+
+    // Expose functions globally
+    window.Sidebar = {
+      open: openSidebar,
+      close: closeSidebar,
+      toggle: toggleSidebar,
+      updateAlertBadge: updateAlertBadge,
+      updateBandwidthIndicator: updateBandwidthIndicator
+    };
+  })();
+</script>

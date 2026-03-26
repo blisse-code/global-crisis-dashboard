@@ -1,0 +1,383 @@
+<!-- GeoForecast Dashboard - Footer Component -->
+<!-- Copy this entire block into your page, before the closing body tag -->
+
+<footer class="footer" role="contentinfo">
+  <div class="footer__container">
+    <!-- Footer Main Content -->
+    <div class="footer__main">
+      <!-- Brand Column -->
+      <div class="footer__brand">
+        <a href="index.html" class="footer__logo">
+          <div class="footer__logo-icon">
+            <svg viewBox="0 0 100 100" width="48" height="48" aria-hidden="true">
+              <circle cx="50" cy="50" r="45" fill="#7C3AED"/>
+              <circle cx="50" cy="50" r="35" fill="none" stroke="#FFFFFF" stroke-width="3"/>
+              <circle cx="50" cy="50" r="15" fill="#FFFFFF"/>
+            </svg>
+          </div>
+          <div class="footer__logo-text">
+            <span class="footer__logo-title">GeoForecast</span>
+            <span class="footer__logo-tagline">Global Threat Intelligence</span>
+          </div>
+        </a>
+        <p class="footer__description">
+          Advanced geopolitical forecasting using game theory, astrological patterns, 
+          and data-driven analytics to provide actionable intelligence for decision makers.
+        </p>
+        
+        <!-- Social Links -->
+        <div class="footer__social">
+          <a href="#" class="footer__social-link" aria-label="Twitter">
+            <i data-lucide="twitter" aria-hidden="true"></i>
+          </a>
+          <a href="#" class="footer__social-link" aria-label="LinkedIn">
+            <i data-lucide="linkedin" aria-hidden="true"></i>
+          </a>
+          <a href="#" class="footer__social-link" aria-label="GitHub">
+            <i data-lucide="github" aria-hidden="true"></i>
+          </a>
+          <a href="#" class="footer__social-link" aria-label="RSS Feed">
+            <i data-lucide="rss" aria-hidden="true"></i>
+          </a>
+        </div>
+      </div>
+
+      <!-- Quick Links Column -->
+      <div class="footer__column">
+        <h3 class="footer__heading">Quick Links</h3>
+        <ul class="footer__links">
+          <li><a href="index.html" class="footer__link">Global Overview</a></li>
+          <li><a href="predictions.html" class="footer__link">Predictions Hub</a></li>
+          <li><a href="timeline.html" class="footer__link">Events Timeline</a></li>
+          <li><a href="alerts.html" class="footer__link">Alert Center</a></li>
+          <li><a href="settings.html" class="footer__link">Settings</a></li>
+        </ul>
+      </div>
+
+      <!-- Resources Column -->
+      <div class="footer__column">
+        <h3 class="footer__heading">Resources</h3>
+        <ul class="footer__links">
+          <li><a href="#documentation" class="footer__link">Documentation</a></li>
+          <li><a href="#api" class="footer__link">API Reference</a></li>
+          <li><a href="#methodology" class="footer__link">Methodology</a></li>
+          <li><a href="#data-sources" class="footer__link">Data Sources</a></li>
+          <li><a href="#faq" class="footer__link">FAQ</a></li>
+        </ul>
+      </div>
+
+      <!-- Contact Column -->
+      <div class="footer__column">
+        <h3 class="footer__heading">Contact</h3>
+        <ul class="footer__links">
+          <li><a href="#about" class="footer__link">About Us</a></li>
+          <li><a href="#contact" class="footer__link">Contact Support</a></li>
+          <li><a href="#feedback" class="footer__link">Send Feedback</a></li>
+          <li><a href="#report" class="footer__link">Report an Issue</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Data Attribution -->
+    <div class="footer__attribution">
+      <div class="footer__attribution-content">
+        <i data-lucide="database" class="footer__attribution-icon" aria-hidden="true"></i>
+        <span class="footer__attribution-text">
+          Data sources: WHO, World Bank, UN, NOAA, USGS, ECDC, and other public health 
+          and safety organizations. Predictions are algorithmic estimates and should not 
+          be considered as definitive forecasts.
+        </span>
+      </div>
+    </div>
+
+    <!-- Footer Bottom -->
+    <div class="footer__bottom">
+      <div class="footer__legal">
+        <span class="footer__copyright">
+          &copy; <span id="footer-year">2024</span> GeoForecast. All rights reserved.
+        </span>
+        <nav class="footer__legal-nav" aria-label="Legal links">
+          <a href="#privacy" class="footer__legal-link">Privacy Policy</a>
+          <a href="#terms" class="footer__legal-link">Terms of Service</a>
+          <a href="#cookies" class="footer__legal-link">Cookie Policy</a>
+          <a href="#accessibility" class="footer__legal-link">Accessibility</a>
+        </nav>
+      </div>
+      
+      <div class="footer__version">
+        <span class="footer__version-label">Version</span>
+        <span class="footer__version-number">1.0.0</span>
+        <span class="footer__version-separator">|</span>
+        <span class="footer__build">Build 2024.01.15</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- Footer Styles (add to your CSS or keep inline) -->
+<style>
+  .footer {
+    background: var(--color-bg-dark);
+    color: var(--color-text-light);
+    padding: var(--space-12) 0 var(--space-6);
+    margin-left: var(--sidebar-width);
+  }
+
+  .footer__container {
+    max-width: var(--max-container-width);
+    margin: 0 auto;
+    padding: 0 var(--page-padding);
+  }
+
+  /* Footer Main Grid */
+  .footer__main {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: var(--space-12);
+    padding-bottom: var(--space-8);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  /* Brand Section */
+  .footer__brand {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .footer__logo {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .footer__logo-icon {
+    flex-shrink: 0;
+  }
+
+  .footer__logo-text {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .footer__logo-title {
+    font-size: var(--text-h5);
+    font-weight: var(--font-bold);
+    color: var(--color-text-light);
+  }
+
+  .footer__logo-tagline {
+    font-size: var(--text-caption);
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .footer__description {
+    font-size: var(--text-body-sm);
+    color: rgba(255, 255, 255, 0.7);
+    line-height: var(--leading-loose);
+    max-width: 320px;
+  }
+
+  /* Social Links */
+  .footer__social {
+    display: flex;
+    gap: var(--space-3);
+  }
+
+  .footer__social-link {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-light);
+    transition: var(--transition-fast);
+  }
+
+  .footer__social-link:hover {
+    background: var(--color-secondary);
+    transform: translateY(-2px);
+  }
+
+  .footer__social-link svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Footer Columns */
+  .footer__column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .footer__heading {
+    font-size: var(--text-body);
+    font-weight: var(--font-semibold);
+    color: var(--color-text-light);
+    margin: 0;
+  }
+
+  .footer__links {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .footer__link {
+    font-size: var(--text-body-sm);
+    color: rgba(255, 255, 255, 0.7);
+    transition: var(--transition-fast);
+    display: inline-block;
+  }
+
+  .footer__link:hover {
+    color: var(--color-text-light);
+    transform: translateX(4px);
+  }
+
+  /* Data Attribution */
+  .footer__attribution {
+    padding: var(--space-6) 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .footer__attribution-content {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .footer__attribution-icon {
+    width: 16px;
+    height: 16px;
+    color: rgba(255, 255, 255, 0.5);
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .footer__attribution-text {
+    font-size: var(--text-caption);
+    color: rgba(255, 255, 255, 0.5);
+    line-height: var(--leading-relaxed);
+  }
+
+  /* Footer Bottom */
+  .footer__bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: var(--space-6);
+    gap: var(--space-4);
+  }
+
+  .footer__legal {
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+    flex-wrap: wrap;
+  }
+
+  .footer__copyright {
+    font-size: var(--text-caption);
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .footer__legal-nav {
+    display: flex;
+    gap: var(--space-4);
+  }
+
+  .footer__legal-link {
+    font-size: var(--text-caption);
+    color: rgba(255, 255, 255, 0.6);
+    transition: var(--transition-fast);
+  }
+
+  .footer__legal-link:hover {
+    color: var(--color-text-light);
+  }
+
+  .footer__version {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-caption);
+    color: rgba(255, 255, 255, 0.4);
+  }
+
+  .footer__version-label {
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .footer__version-number {
+    font-family: var(--font-mono);
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .footer__version-separator {
+    margin: 0 var(--space-1);
+  }
+
+  /* Responsive Styles */
+  @media (max-width: 1023px) {
+    .footer {
+      margin-left: 0;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .footer__main {
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-8);
+    }
+
+    .footer__brand {
+      grid-column: 1 / -1;
+    }
+
+    .footer__description {
+      max-width: 100%;
+    }
+  }
+
+  @media (max-width: 639px) {
+    .footer {
+      padding: var(--space-8) 0 var(--space-4);
+    }
+
+    .footer__main {
+      grid-template-columns: 1fr;
+      gap: var(--space-6);
+    }
+
+    .footer__bottom {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--space-4);
+    }
+
+    .footer__legal {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--space-3);
+    }
+
+    .footer__legal-nav {
+      flex-wrap: wrap;
+    }
+  }
+</style>
+
+<!-- Footer JavaScript -->
+<script>
+  (function() {
+    // Update copyright year automatically
+    const yearElement = document.getElementById('footer-year');
+    if (yearElement) {
+      yearElement.textContent = new Date().getFullYear();
+    }
+  })();
+</script>
