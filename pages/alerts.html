@@ -1,0 +1,2641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alert Center | Geopolitical Forecast Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="../shared/styles.css">
+  <style>
+    /* Page-specific styles */
+    .alerts-page {
+      padding: var(--space-6);
+    }
+
+    /* Alert Statistics Header */
+    .alert-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--space-4);
+      margin-bottom: var(--space-6);
+    }
+
+    .alert-stat-card {
+      background: var(--color-card-bg);
+      border-radius: var(--radius-xl);
+      padding: var(--space-5);
+      box-shadow: var(--shadow-md);
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      transition: var(--transition-normal);
+    }
+
+    .alert-stat-card:hover {
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-2px);
+    }
+
+    .alert-stat-card__icon {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .alert-stat-card__icon--total { background: rgba(30, 58, 95, 0.1); color: var(--color-primary); }
+    .alert-stat-card__icon--critical { background: rgba(220, 38, 38, 0.1); color: var(--color-alert-critical); }
+    .alert-stat-card__icon--high { background: rgba(249, 115, 22, 0.1); color: var(--color-alert-high); }
+    .alert-stat-card__icon--medium { background: rgba(234, 179, 8, 0.1); color: var(--color-alert-medium); }
+    .alert-stat-card__icon--low { background: rgba(34, 197, 94, 0.1); color: var(--color-alert-low); }
+    .alert-stat-card__icon--new { background: rgba(59, 130, 246, 0.1); color: var(--color-alert-info); }
+
+    .alert-stat-card__content {
+      flex: 1;
+    }
+
+    .alert-stat-card__label {
+      font-size: var(--text-caption);
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: var(--tracking-wider);
+    }
+
+    .alert-stat-card__value {
+      font-size: var(--text-h3);
+      font-weight: var(--font-bold);
+      color: var(--color-text-primary);
+    }
+
+    /* Filter Section */
+    .filter-section {
+      background: var(--color-card-bg);
+      border-radius: var(--radius-xl);
+      padding: var(--space-5);
+      margin-bottom: var(--space-6);
+      box-shadow: var(--shadow-md);
+    }
+
+    .filter-section__title {
+      font-size: var(--text-body-sm);
+      font-weight: var(--font-semibold);
+      color: var(--color-text-secondary);
+      text-transform: uppercase;
+      letter-spacing: var(--tracking-wider);
+      margin-bottom: var(--space-4);
+    }
+
+    /* Alert Type Filters */
+    .alert-type-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-3);
+      margin-bottom: var(--space-6);
+    }
+
+    .alert-type-filter {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--radius-lg);
+      border: 2px solid var(--color-border);
+      background: var(--color-card-bg);
+      cursor: pointer;
+      transition: var(--transition-fast);
+      font-size: var(--text-body-sm);
+      font-weight: var(--font-medium);
+      color: var(--color-text-secondary);
+    }
+
+    .alert-type-filter:hover {
+      border-color: var(--color-primary-light);
+      background: var(--color-bg-alt);
+    }
+
+    .alert-type-filter.is-active {
+      border-color: var(--color-primary);
+      background: rgba(30, 58, 95, 0.05);
+      color: var(--color-primary);
+    }
+
+    .alert-type-filter__icon {
+      width: 20px;
+      height: 20px;
+    }
+
+    .alert-type-filter__count {
+      padding: var(--space-1) var(--space-2);
+      background: var(--color-border);
+      border-radius: var(--radius-full);
+      font-size: var(--text-caption);
+      font-weight: var(--font-semibold);
+      min-width: 24px;
+      text-align: center;
+    }
+
+    .alert-type-filter.is-active .alert-type-filter__count {
+      background: var(--color-primary);
+      color: var(--color-text-light);
+    }
+
+    /* Severity Filters */
+    .severity-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-3);
+      margin-bottom: var(--space-6);
+    }
+
+    .severity-filter {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--radius-full);
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: var(--transition-fast);
+      font-size: var(--text-body-sm);
+      font-weight: var(--font-medium);
+    }
+
+    .severity-filter--critical {
+      background: rgba(220, 38, 38, 0.1);
+      color: var(--color-alert-critical);
+    }
+
+    .severity-filter--high {
+      background: rgba(249, 115, 22, 0.1);
+      color: var(--color-alert-high);
+    }
+
+    .severity-filter--medium {
+      background: rgba(234, 179, 8, 0.1);
+      color: var(--color-alert-medium);
+    }
+
+    .severity-filter--low {
+      background: rgba(34, 197, 94, 0.1);
+      color: var(--color-alert-low);
+    }
+
+    .severity-filter--info {
+      background: rgba(59, 130, 246, 0.1);
+      color: var(--color-alert-info);
+    }
+
+    .severity-filter:hover {
+      opacity: 0.8;
+    }
+
+    .severity-filter.is-active {
+      border-color: currentColor;
+      box-shadow: 0 0 0 3px currentColor;
+      box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 20%, transparent);
+    }
+
+    .severity-filter__dot {
+      width: 10px;
+      height: 10px;
+      border-radius: var(--radius-full);
+      background: currentColor;
+    }
+
+    /* Geographic Filters */
+    .geo-filters {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--space-4);
+    }
+
+    .geo-filter {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .geo-filter__label {
+      font-size: var(--text-caption);
+      font-weight: var(--font-semibold);
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: var(--tracking-wider);
+    }
+
+    .geo-filter__select {
+      padding: var(--space-3) var(--space-4);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: var(--color-card-bg);
+      font-size: var(--text-body);
+      color: var(--color-text-primary);
+      cursor: pointer;
+      transition: var(--transition-fast);
+    }
+
+    .geo-filter__select:focus {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.1);
+    }
+
+    /* Alert List */
+    .alerts-container {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .alerts-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: var(--space-4);
+    }
+
+    .alerts-count {
+      font-size: var(--text-body);
+      color: var(--color-text-secondary);
+    }
+
+    .alerts-count__value {
+      font-weight: var(--font-semibold);
+      color: var(--color-text-primary);
+    }
+
+    .alerts-sort {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .alerts-sort__label {
+      font-size: var(--text-body-sm);
+      color: var(--color-text-muted);
+    }
+
+    .alerts-sort__select {
+      padding: var(--space-2) var(--space-4);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: var(--color-card-bg);
+      font-size: var(--text-body-sm);
+      color: var(--color-text-primary);
+      cursor: pointer;
+    }
+
+    /* Alert Cards Grid */
+    .alert-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: var(--space-4);
+    }
+
+    @media (max-width: 639px) {
+      .alert-cards {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .alert-card {
+      background: var(--color-card-bg);
+      border-radius: var(--radius-xl);
+      padding: var(--space-5);
+      box-shadow: var(--shadow-md);
+      border-left: 4px solid var(--color-neutral);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      transition: var(--transition-normal);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .alert-card:hover {
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-2px);
+    }
+
+    .alert-card.is-new::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.05), transparent);
+      animation: newAlertPulse 2s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes newAlertPulse {
+      0%, 100% { opacity: 0; }
+      50% { opacity: 1; }
+    }
+
+    .alert-card--critical { border-left-color: var(--color-alert-critical); }
+    .alert-card--high { border-left-color: var(--color-alert-high); }
+    .alert-card--medium { border-left-color: var(--color-alert-medium); }
+    .alert-card--low { border-left-color: var(--color-alert-low); }
+    .alert-card--info { border-left-color: var(--color-alert-info); }
+
+    .alert-card__header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--space-3);
+    }
+
+    .alert-card__type {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .alert-card__type-icon {
+      width: 24px;
+      height: 24px;
+    }
+
+    .alert-card--critical .alert-card__type-icon { color: var(--color-alert-critical); }
+    .alert-card--high .alert-card__type-icon { color: var(--color-alert-high); }
+    .alert-card--medium .alert-card__type-icon { color: var(--color-alert-medium); }
+    .alert-card--low .alert-card__type-icon { color: var(--color-alert-low); }
+    .alert-card--info .alert-card__type-icon { color: var(--color-alert-info); }
+
+    .alert-card__badge {
+      padding: var(--space-1) var(--space-3);
+      border-radius: var(--radius-full);
+      font-size: var(--text-caption);
+      font-weight: var(--font-semibold);
+      text-transform: uppercase;
+      letter-spacing: var(--tracking-wider);
+    }
+
+    .alert-card--critical .alert-card__badge { background: rgba(220, 38, 38, 0.1); color: var(--color-alert-critical); }
+    .alert-card--high .alert-card__badge { background: rgba(249, 115, 22, 0.1); color: var(--color-alert-high); }
+    .alert-card--medium .alert-card__badge { background: rgba(234, 179, 8, 0.1); color: var(--color-alert-medium); }
+    .alert-card--low .alert-card__badge { background: rgba(34, 197, 94, 0.1); color: var(--color-alert-low); }
+    .alert-card--info .alert-card__badge { background: rgba(59, 130, 246, 0.1); color: var(--color-alert-info); }
+
+    .alert-card__title {
+      font-size: var(--text-h5);
+      font-weight: var(--font-semibold);
+      color: var(--color-text-primary);
+      line-height: var(--leading-snug);
+    }
+
+    .alert-card__description {
+      font-size: var(--text-body-sm);
+      color: var(--color-text-secondary);
+      line-height: var(--leading-loose);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .alert-card__meta {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: var(--space-4);
+      font-size: var(--text-caption);
+      color: var(--color-text-muted);
+    }
+
+    .alert-card__meta-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+    }
+
+    .alert-card__meta-item svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .alert-card__actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin-top: auto;
+      padding-top: var(--space-3);
+      border-top: 1px solid var(--color-border-light);
+    }
+
+    .alert-card__acknowledge {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      background: var(--color-card-bg);
+      font-size: var(--text-body-sm);
+      font-weight: var(--font-medium);
+      color: var(--color-text-secondary);
+      cursor: pointer;
+      transition: var(--transition-fast);
+    }
+
+    .alert-card__acknowledge:hover {
+      background: var(--color-bg-alt);
+      border-color: var(--color-primary-light);
+    }
+
+    .alert-card__acknowledge.is-acknowledged {
+      background: var(--color-success);
+      border-color: var(--color-success);
+      color: var(--color-text-light);
+    }
+
+    .alert-card__details {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+      font-size: var(--text-body-sm);
+      font-weight: var(--font-medium);
+      color: var(--color-primary);
+      transition: var(--transition-fast);
+    }
+
+    .alert-card__details:hover {
+      color: var(--color-primary-light);
+    }
+
+    /* Alert Detail Modal */
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: var(--z-modal);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-4);
+      opacity: 0;
+      visibility: hidden;
+      transition: var(--transition-normal);
+    }
+
+    .modal.is-open {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal__backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+    }
+
+    .modal__content {
+      position: relative;
+      background: var(--color-card-bg);
+      border-radius: var(--radius-2xl);
+      width: 100%;
+      max-width: 700px;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transform: scale(0.95);
+      transition: transform var(--duration-normal) var(--ease-out);
+    }
+
+    .modal.is-open .modal__content {
+      transform: scale(1);
+    }
+
+    .modal__header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--space-4);
+      padding: var(--space-6);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .modal__title-section {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .modal__type {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--text-body-sm);
+      color: var(--color-text-muted);
+    }
+
+    .modal__type-icon {
+      width: 20px;
+      height: 20px;
+    }
+
+    .modal__title {
+      font-size: var(--text-h4);
+      font-weight: var(--font-semibold);
+      color: var(--color-text-primary);
+    }
+
+    .modal__close {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text-muted);
+      transition: var(--transition-fast);
+      flex-shrink: 0;
+    }
+
+    .modal__close:hover {
+      background: var(--color-bg-alt);
+      color: var(--color-text-primary);
+    }
+
+    .modal__body {
+      padding: var(--space-6);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+    }
+
+    .modal__section {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .modal__section-title {
+      font-size: var(--text-body-sm);
+      font-weight: var(--font-semibold);
+      color: var(--color-text-secondary);
+      text-transform: uppercase;
+      letter-spacing: var(--tracking-wider);
+    }
+
+    .modal__description {
+      font-size: var(--text-body);
+      color: var(--color-text-primary);
+      line-height: var(--leading-loose);
+    }
+
+    .modal__meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: var(--space-4);
+    }
+
+    .modal__meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+
+    .modal__meta-label {
+      font-size: var(--text-caption);
+      color: var(--color-text-muted);
+    }
+
+    .modal__meta-value {
+      font-size: var(--text-body);
+      font-weight: var(--font-medium);
+      color: var(--color-text-primary);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .modal__actions-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .modal__action-item {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-3);
+      padding: var(--space-4);
+      background: var(--color-bg-alt);
+      border-radius: var(--radius-lg);
+    }
+
+    .modal__action-icon {
+      width: 24px;
+      height: 24px;
+      color: var(--color-primary);
+      flex-shrink: 0;
+    }
+
+    .modal__action-content {
+      flex: 1;
+    }
+
+    .modal__action-title {
+      font-size: var(--text-body);
+      font-weight: var(--font-semibold);
+      color: var(--color-text-primary);
+    }
+
+    .modal__action-desc {
+      font-size: var(--text-body-sm);
+      color: var(--color-text-secondary);
+      margin-top: var(--space-1);
+    }
+
+    .modal__footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+      padding: var(--space-4) var(--space-6);
+      border-top: 1px solid var(--color-border);
+      background: var(--color-bg-alt);
+    }
+
+    /* Related Alerts */
+    .related-alerts {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .related-alert {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3);
+      background: var(--color-bg-alt);
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      transition: var(--transition-fast);
+    }
+
+    .related-alert:hover {
+      background: var(--color-border-light);
+    }
+
+    .related-alert__icon {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .related-alert__content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .related-alert__title {
+      font-size: var(--text-body-sm);
+      font-weight: var(--font-medium);
+      color: var(--color-text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .related-alert__meta {
+      font-size: var(--text-caption);
+      color: var(--color-text-muted);
+    }
+
+    /* Subscription Section */
+    .subscription-section {
+      background: var(--color-card-bg);
+      border-radius: var(--radius-xl);
+      padding: var(--space-6);
+      margin-top: var(--space-6);
+      box-shadow: var(--shadow-md);
+    }
+
+    .subscription-section__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: var(--space-4);
+      margin-bottom: var(--space-6);
+    }
+
+    .subscription-section__title {
+      font-size: var(--text-h4);
+      font-weight: var(--font-semibold);
+      color: var(--color-text-primary);
+    }
+
+    .subscription-form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: var(--space-4);
+      margin-bottom: var(--space-6);
+    }
+
+    .subscription-form__group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .subscription-form__label {
+      font-size: var(--text-caption);
+      font-weight: var(--font-semibold);
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: var(--tracking-wider);
+    }
+
+    .subscription-form__select,
+    .subscription-form__input {
+      padding: var(--space-3) var(--space-4);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: var(--color-card-bg);
+      font-size: var(--text-body);
+      color: var(--color-text-primary);
+      transition: var(--transition-fast);
+    }
+
+    .subscription-form__select:focus,
+    .subscription-form__input:focus {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.1);
+    }
+
+    .subscription-preferences {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--space-4);
+    }
+
+    .preference-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-4);
+      background: var(--color-bg-alt);
+      border-radius: var(--radius-lg);
+    }
+
+    .preference-item__label {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      font-size: var(--text-body);
+      color: var(--color-text-primary);
+    }
+
+    .preference-item__icon {
+      width: 20px;
+      height: 20px;
+      color: var(--color-primary);
+    }
+
+    /* Toggle Switch */
+    .toggle-switch {
+      position: relative;
+      width: 48px;
+      height: 24px;
+      background: var(--color-border-dark);
+      border-radius: var(--radius-full);
+      cursor: pointer;
+      transition: var(--transition-fast);
+    }
+
+    .toggle-switch.is-active {
+      background: var(--color-primary);
+    }
+
+    .toggle-switch__thumb {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 20px;
+      height: 20px;
+      background: var(--color-card-bg);
+      border-radius: var(--radius-full);
+      transition: transform var(--transition-fast);
+    }
+
+    .toggle-switch.is-active .toggle-switch__thumb {
+      transform: translateX(24px);
+    }
+
+    /* Current Subscriptions */
+    .current-subscriptions {
+      margin-top: var(--space-6);
+    }
+
+    .current-subscriptions__title {
+      font-size: var(--text-body-sm);
+      font-weight: var(--font-semibold);
+      color: var(--color-text-secondary);
+      text-transform: uppercase;
+      letter-spacing: var(--tracking-wider);
+      margin-bottom: var(--space-4);
+    }
+
+    .subscription-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .subscription-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-4);
+      background: var(--color-bg-alt);
+      border-radius: var(--radius-lg);
+    }
+
+    .subscription-item__info {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+
+    .subscription-item__type {
+      font-size: var(--text-body);
+      font-weight: var(--font-medium);
+      color: var(--color-text-primary);
+    }
+
+    .subscription-item__details {
+      font-size: var(--text-caption);
+      color: var(--color-text-muted);
+    }
+
+    .subscription-item__actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .subscription-item__btn {
+      padding: var(--space-2) var(--space-3);
+      border-radius: var(--radius-md);
+      font-size: var(--text-caption);
+      font-weight: var(--font-medium);
+      transition: var(--transition-fast);
+    }
+
+    .subscription-item__btn--edit {
+      color: var(--color-primary);
+      background: rgba(30, 58, 95, 0.1);
+    }
+
+    .subscription-item__btn--edit:hover {
+      background: rgba(30, 58, 95, 0.2);
+    }
+
+    .subscription-item__btn--remove {
+      color: var(--color-alert-critical);
+      background: rgba(220, 38, 38, 0.1);
+    }
+
+    .subscription-item__btn--remove:hover {
+      background: rgba(220, 38, 38, 0.2);
+    }
+
+    /* Pagination */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-2);
+      margin-top: var(--space-6);
+    }
+
+    .pagination__btn {
+      min-width: 40px;
+      height: 40px;
+      padding: 0 var(--space-3);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      background: var(--color-card-bg);
+      font-size: var(--text-body-sm);
+      font-weight: var(--font-medium);
+      color: var(--color-text-secondary);
+      cursor: pointer;
+      transition: var(--transition-fast);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .pagination__btn:hover:not(:disabled) {
+      background: var(--color-bg-alt);
+      border-color: var(--color-primary-light);
+    }
+
+    .pagination__btn.is-active {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+      color: var(--color-text-light);
+    }
+
+    .pagination__btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Empty State */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-12);
+      text-align: center;
+    }
+
+    .empty-state__icon {
+      width: 64px;
+      height: 64px;
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-4);
+    }
+
+    .empty-state__title {
+      font-size: var(--text-h5);
+      font-weight: var(--font-semibold);
+      color: var(--color-text-primary);
+      margin-bottom: var(--space-2);
+    }
+
+    .empty-state__description {
+      font-size: var(--text-body);
+      color: var(--color-text-secondary);
+      max-width: 400px;
+    }
+
+    /* Toast Container */
+    .toast-container {
+      position: fixed;
+      top: var(--space-6);
+      right: var(--space-6);
+      z-index: var(--z-toast);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      max-width: 400px;
+    }
+
+    .toast {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-3);
+      padding: var(--space-4);
+      background: var(--color-card-bg);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-xl);
+      animation: toastSlideIn 300ms var(--ease-out);
+    }
+
+    .toast--exit {
+      animation: toastSlideOut 300ms var(--ease-in) forwards;
+    }
+
+    @keyframes toastSlideIn {
+      from {
+        opacity: 0;
+        transform: translateX(100%);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes toastSlideOut {
+      from {
+        opacity: 1;
+        transform: translateX(0);
+      }
+      to {
+        opacity: 0;
+        transform: translateX(100%);
+      }
+    }
+
+    .toast__icon {
+      width: 24px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+
+    .toast--success .toast__icon { color: var(--color-success); }
+    .toast--error .toast__icon { color: var(--color-error); }
+    .toast--warning .toast__icon { color: var(--color-warning); }
+    .toast--info .toast__icon { color: var(--color-info); }
+
+    .toast__content {
+      flex: 1;
+    }
+
+    .toast__title {
+      font-size: var(--text-body);
+      font-weight: var(--font-semibold);
+      color: var(--color-text-primary);
+    }
+
+    .toast__message {
+      font-size: var(--text-body-sm);
+      color: var(--color-text-secondary);
+      margin-top: var(--space-1);
+    }
+
+    .toast__close {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text-muted);
+      transition: var(--transition-fast);
+      flex-shrink: 0;
+    }
+
+    .toast__close:hover {
+      color: var(--color-text-primary);
+    }
+
+    /* Responsive */
+    @media (max-width: 1023px) {
+      .alerts-page {
+        padding: var(--space-4);
+      }
+
+      .main-content {
+        margin-left: 0;
+      }
+
+      .footer {
+        margin-left: 0;
+      }
+    }
+
+    @media (max-width: 639px) {
+      .alert-stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .alert-stat-card {
+        padding: var(--space-4);
+      }
+
+      .alert-stat-card__icon {
+        width: 40px;
+        height: 40px;
+      }
+
+      .alert-stat-card__value {
+        font-size: var(--text-h4);
+      }
+
+      .filter-section {
+        padding: var(--space-4);
+      }
+
+      .modal__content {
+        max-height: 95vh;
+        border-radius: var(--radius-xl);
+      }
+
+      .modal__header,
+      .modal__body,
+      .modal__footer {
+        padding: var(--space-4);
+      }
+    }
+
+    /* Reduced Motion */
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Mobile Menu Toggle -->
+  <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+    <i data-lucide="menu" class="mobile-menu-toggle__icon"></i>
+  </button>
+
+  <!-- Sidebar Overlay -->
+  <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+  <!-- Sidebar Navigation -->
+  <aside id="sidebar" class="sidebar" role="navigation" aria-label="Main navigation">
+    <div class="sidebar__header">
+      <a href="index.html" class="sidebar__logo">
+        <div class="sidebar__logo-icon">
+          <svg viewBox="0 0 100 100" width="40" height="40" aria-hidden="true">
+            <circle cx="50" cy="50" r="45" fill="#1E3A5F"/>
+            <circle cx="50" cy="50" r="35" fill="none" stroke="#7C3AED" stroke-width="3"/>
+            <circle cx="50" cy="50" r="15" fill="#7C3AED"/>
+          </svg>
+        </div>
+        <div class="sidebar__logo-text">
+          <span class="sidebar__logo-title">GeoForecast</span>
+          <span class="sidebar__logo-subtitle">Threat Intelligence</span>
+        </div>
+      </a>
+      <button id="sidebar-close" class="sidebar__close" aria-label="Close navigation menu">
+        <i data-lucide="x" class="sidebar__close-icon"></i>
+      </button>
+    </div>
+
+    <nav class="sidebar__nav">
+      <ul class="sidebar__menu" role="menubar">
+        <li class="sidebar__item" role="none">
+          <a href="index.html" class="sidebar__link" data-page="index" role="menuitem">
+            <span class="sidebar__link-icon">
+              <i data-lucide="globe" aria-hidden="true"></i>
+            </span>
+            <span class="sidebar__link-text">Global Overview</span>
+          </a>
+        </li>
+        <li class="sidebar__item" role="none">
+          <a href="predictions.html" class="sidebar__link" data-page="predictions" role="menuitem">
+            <span class="sidebar__link-icon">
+              <i data-lucide="brain" aria-hidden="true"></i>
+            </span>
+            <span class="sidebar__link-text">Predictions</span>
+          </a>
+        </li>
+        <li class="sidebar__item" role="none">
+          <a href="timeline.html" class="sidebar__link" data-page="timeline" role="menuitem">
+            <span class="sidebar__link-icon">
+              <i data-lucide="calendar" aria-hidden="true"></i>
+            </span>
+            <span class="sidebar__link-text">Timeline</span>
+          </a>
+        </li>
+        <li class="sidebar__item" role="none">
+          <a href="alerts.html" class="sidebar__link is-active" data-page="alerts" role="menuitem" aria-current="page">
+            <span class="sidebar__link-icon">
+              <i data-lucide="bell" aria-hidden="true"></i>
+            </span>
+            <span class="sidebar__link-text">Alert Center</span>
+            <span id="alert-badge" class="sidebar__badge" aria-label="Unread alerts">12</span>
+          </a>
+        </li>
+        <li class="sidebar__item" role="none">
+          <a href="settings.html" class="sidebar__link" data-page="settings" role="menuitem">
+            <span class="sidebar__link-icon">
+              <i data-lucide="settings" aria-hidden="true"></i>
+            </span>
+            <span class="sidebar__link-text">Settings</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <div class="sidebar__footer">
+      <div class="sidebar__bandwidth" id="bandwidth-indicator">
+        <span class="sidebar__bandwidth-label">Mode:</span>
+        <span class="sidebar__bandwidth-value" id="bandwidth-value">Auto</span>
+      </div>
+      <div class="sidebar__user">
+        <div class="sidebar__user-avatar">
+          <i data-lucide="user" aria-hidden="true"></i>
+        </div>
+        <div class="sidebar__user-info">
+          <span class="sidebar__user-name">Guest User</span>
+          <span class="sidebar__user-role">Analyst</span>
+        </div>
+      </div>
+      <div class="sidebar__version">
+        <span>v1.0.0</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="alerts-page">
+      <!-- Page Header -->
+      <div class="flex items-center justify-between flex-wrap gap-4 mb-6">
+        <div>
+          <h1 class="h2">Alert Center</h1>
+          <p class="text-body text-gray-600 mt-1">Monitor and manage global threat alerts</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button class="btn btn-secondary" id="mark-all-read">
+            <i data-lucide="check-check" class="w-4 h-4"></i>
+            <span>Mark All Read</span>
+          </button>
+          <button class="btn btn-primary" id="export-alerts">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            <span>Export</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Alert Statistics Header -->
+      <div class="alert-stats">
+        <div class="alert-stat-card">
+          <div class="alert-stat-card__icon alert-stat-card__icon--total">
+            <i data-lucide="bell" class="w-6 h-6"></i>
+          </div>
+          <div class="alert-stat-card__content">
+            <div class="alert-stat-card__label">Total Active</div>
+            <div class="alert-stat-card__value" id="stat-total">127</div>
+          </div>
+        </div>
+        <div class="alert-stat-card">
+          <div class="alert-stat-card__icon alert-stat-card__icon--critical">
+            <i data-lucide="alert-octagon" class="w-6 h-6"></i>
+          </div>
+          <div class="alert-stat-card__content">
+            <div class="alert-stat-card__label">Critical</div>
+            <div class="alert-stat-card__value" id="stat-critical">8</div>
+          </div>
+        </div>
+        <div class="alert-stat-card">
+          <div class="alert-stat-card__icon alert-stat-card__icon--high">
+            <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+          </div>
+          <div class="alert-stat-card__content">
+            <div class="alert-stat-card__label">High</div>
+            <div class="alert-stat-card__value" id="stat-high">23</div>
+          </div>
+        </div>
+        <div class="alert-stat-card">
+          <div class="alert-stat-card__icon alert-stat-card__icon--medium">
+            <i data-lucide="alert-circle" class="w-6 h-6"></i>
+          </div>
+          <div class="alert-stat-card__content">
+            <div class="alert-stat-card__label">Medium</div>
+            <div class="alert-stat-card__value" id="stat-medium">45</div>
+          </div>
+        </div>
+        <div class="alert-stat-card">
+          <div class="alert-stat-card__icon alert-stat-card__icon--low">
+            <i data-lucide="info" class="w-6 h-6"></i>
+          </div>
+          <div class="alert-stat-card__content">
+            <div class="alert-stat-card__label">Low</div>
+            <div class="alert-stat-card__value" id="stat-low">51</div>
+          </div>
+        </div>
+        <div class="alert-stat-card">
+          <div class="alert-stat-card__icon alert-stat-card__icon--new">
+            <i data-lucide="sparkles" class="w-6 h-6"></i>
+          </div>
+          <div class="alert-stat-card__content">
+            <div class="alert-stat-card__label">New Today</div>
+            <div class="alert-stat-card__value" id="stat-new">12</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alert Type Filters -->
+      <div class="filter-section">
+        <h3 class="filter-section__title">Alert Types</h3>
+        <div class="alert-type-filters" id="alert-type-filters">
+          <button class="alert-type-filter is-active" data-type="all">
+            <i data-lucide="layers" class="alert-type-filter__icon"></i>
+            <span>All Types</span>
+            <span class="alert-type-filter__count">127</span>
+          </button>
+          <button class="alert-type-filter" data-type="contamination">
+            <i data-lucide="biohazard" class="alert-type-filter__icon"></i>
+            <span>Contamination</span>
+            <span class="alert-type-filter__count">18</span>
+          </button>
+          <button class="alert-type-filter" data-type="flight">
+            <i data-lucide="plane" class="alert-type-filter__icon"></i>
+            <span>Flight Risk</span>
+            <span class="alert-type-filter__count">12</span>
+          </button>
+          <button class="alert-type-filter" data-type="travel">
+            <i data-lucide="map" class="alert-type-filter__icon"></i>
+            <span>Travel Risk</span>
+            <span class="alert-type-filter__count">24</span>
+          </button>
+          <button class="alert-type-filter" data-type="tourist">
+            <i data-lucide="camera" class="alert-type-filter__icon"></i>
+            <span>Tourist Risk</span>
+            <span class="alert-type-filter__count">9</span>
+          </button>
+          <button class="alert-type-filter" data-type="living">
+            <i data-lucide="skull" class="alert-type-filter__icon"></i>
+            <span>Living/Death</span>
+            <span class="alert-type-filter__count">15</span>
+          </button>
+          <button class="alert-type-filter" data-type="health">
+            <i data-lucide="heart-pulse" class="alert-type-filter__icon"></i>
+            <span>Health Risk</span>
+            <span class="alert-type-filter__count">31</span>
+          </button>
+          <button class="alert-type-filter" data-type="economic">
+            <i data-lucide="trending-down" class="alert-type-filter__icon"></i>
+            <span>Economic</span>
+            <span class="alert-type-filter__count">18</span>
+          </button>
+        </div>
+
+        <!-- Severity Filters -->
+        <h3 class="filter-section__title">Severity Levels</h3>
+        <div class="severity-filters" id="severity-filters">
+          <button class="severity-filter severity-filter--critical is-active" data-severity="critical">
+            <span class="severity-filter__dot"></span>
+            <span>Critical</span>
+          </button>
+          <button class="severity-filter severity-filter--high is-active" data-severity="high">
+            <span class="severity-filter__dot"></span>
+            <span>High</span>
+          </button>
+          <button class="severity-filter severity-filter--medium is-active" data-severity="medium">
+            <span class="severity-filter__dot"></span>
+            <span>Medium</span>
+          </button>
+          <button class="severity-filter severity-filter--low is-active" data-severity="low">
+            <span class="severity-filter__dot"></span>
+            <span>Low</span>
+          </button>
+          <button class="severity-filter severity-filter--info is-active" data-severity="info">
+            <span class="severity-filter__dot"></span>
+            <span>Info</span>
+          </button>
+        </div>
+
+        <!-- Geographic Filters -->
+        <h3 class="filter-section__title">Location</h3>
+        <div class="geo-filters">
+          <div class="geo-filter">
+            <label class="geo-filter__label">Region</label>
+            <select class="geo-filter__select" id="region-select">
+              <option value="">All Regions</option>
+              <option value="africa">Africa</option>
+              <option value="asia">Asia</option>
+              <option value="europe">Europe</option>
+              <option value="north-america">North America</option>
+              <option value="south-america">South America</option>
+              <option value="oceania">Oceania</option>
+              <option value="middle-east">Middle East</option>
+            </select>
+          </div>
+          <div class="geo-filter">
+            <label class="geo-filter__label">Country</label>
+            <select class="geo-filter__select" id="country-select">
+              <option value="">All Countries</option>
+              <option value="US">United States</option>
+              <option value="CN">China</option>
+              <option value="RU">Russia</option>
+              <option value="IN">India</option>
+              <option value="BR">Brazil</option>
+              <option value="GB">United Kingdom</option>
+              <option value="DE">Germany</option>
+              <option value="FR">France</option>
+              <option value="JP">Japan</option>
+              <option value="AU">Australia</option>
+            </select>
+          </div>
+          <div class="geo-filter">
+            <label class="geo-filter__label">City</label>
+            <select class="geo-filter__select" id="city-select">
+              <option value="">All Cities</option>
+            </select>
+          </div>
+          <div class="geo-filter">
+            <label class="geo-filter__label">Radius (km)</label>
+            <select class="geo-filter__select" id="radius-select">
+              <option value="">Any Distance</option>
+              <option value="50">Within 50 km</option>
+              <option value="100">Within 100 km</option>
+              <option value="250">Within 250 km</option>
+              <option value="500">Within 500 km</option>
+              <option value="1000">Within 1000 km</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alert List -->
+      <div class="alerts-container">
+        <div class="alerts-header">
+          <div class="alerts-count">
+            Showing <span class="alerts-count__value" id="showing-count">24</span> of <span class="alerts-count__value" id="total-count">127</span> alerts
+          </div>
+          <div class="alerts-sort">
+            <span class="alerts-sort__label">Sort by:</span>
+            <select class="alerts-sort__select" id="sort-select">
+              <option value="newest">Newest First</option>
+              <option value="severity">Severity (High to Low)</option>
+              <option value="location">Location (A-Z)</option>
+              <option value="type">Alert Type</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Alert Cards -->
+        <div class="alert-cards" id="alert-cards">
+          <!-- Cards will be dynamically generated -->
+        </div>
+
+        <!-- Empty State (hidden by default) -->
+        <div class="empty-state" id="empty-state" style="display: none;">
+          <i data-lucide="inbox" class="empty-state__icon"></i>
+          <h3 class="empty-state__title">No alerts found</h3>
+          <p class="empty-state__description">Try adjusting your filters to see more results.</p>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" id="pagination">
+          <button class="pagination__btn" data-page="prev" disabled>
+            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+          </button>
+          <button class="pagination__btn is-active" data-page="1">1</button>
+          <button class="pagination__btn" data-page="2">2</button>
+          <button class="pagination__btn" data-page="3">3</button>
+          <span class="pagination__btn" style="cursor: default;">...</span>
+          <button class="pagination__btn" data-page="6">6</button>
+          <button class="pagination__btn" data-page="next">
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Subscription Management -->
+      <div class="subscription-section">
+        <div class="subscription-section__header">
+          <h2 class="subscription-section__title">
+            <i data-lucide="rss" class="inline-block w-5 h-5 mr-2"></i>
+            Alert Subscriptions
+          </h2>
+          <button class="btn btn-primary" id="add-subscription">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>Add Subscription</span>
+          </button>
+        </div>
+
+        <!-- Subscription Form -->
+        <div class="subscription-form">
+          <div class="subscription-form__group">
+            <label class="subscription-form__label">Alert Type</label>
+            <select class="subscription-form__select" id="sub-type">
+              <option value="">Select type...</option>
+              <option value="contamination">Contamination</option>
+              <option value="flight">Flight Risk</option>
+              <option value="travel">Travel Risk</option>
+              <option value="tourist">Tourist Risk</option>
+              <option value="living">Living/Death Risk</option>
+              <option value="health">Health Risk</option>
+              <option value="economic">Economic Risk</option>
+            </select>
+          </div>
+          <div class="subscription-form__group">
+            <label class="subscription-form__label">Location</label>
+            <select class="subscription-form__select" id="sub-location">
+              <option value="global">Global</option>
+              <option value="region">My Region</option>
+              <option value="country">Specific Country</option>
+              <option value="city">Specific City</option>
+            </select>
+          </div>
+          <div class="subscription-form__group">
+            <label class="subscription-form__label">Minimum Severity</label>
+            <select class="subscription-form__select" id="sub-severity">
+              <option value="critical">Critical Only</option>
+              <option value="high">High & Above</option>
+              <option value="medium">Medium & Above</option>
+              <option value="low">All Severities</option>
+            </select>
+          </div>
+          <div class="subscription-form__group">
+            <label class="subscription-form__label">Delivery Method</label>
+            <select class="subscription-form__select" id="sub-delivery">
+              <option value="dashboard">Dashboard Only</option>
+              <option value="email">Email</option>
+              <option value="push">Push Notification</option>
+              <option value="sms">SMS</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Notification Preferences -->
+        <h3 class="filter-section__title">Notification Preferences</h3>
+        <div class="subscription-preferences">
+          <div class="preference-item">
+            <span class="preference-item__label">
+              <i data-lucide="mail" class="preference-item__icon"></i>
+              Email Notifications
+            </span>
+            <div class="toggle-switch is-active" data-pref="email">
+              <div class="toggle-switch__thumb"></div>
+            </div>
+          </div>
+          <div class="preference-item">
+            <span class="preference-item__label">
+              <i data-lucide="smartphone" class="preference-item__icon"></i>
+              Push Notifications
+            </span>
+            <div class="toggle-switch is-active" data-pref="push">
+              <div class="toggle-switch__thumb"></div>
+            </div>
+          </div>
+          <div class="preference-item">
+            <span class="preference-item__label">
+              <i data-lucide="message-square" class="preference-item__icon"></i>
+              SMS Alerts
+            </span>
+            <div class="toggle-switch" data-pref="sms">
+              <div class="toggle-switch__thumb"></div>
+            </div>
+          </div>
+          <div class="preference-item">
+            <span class="preference-item__label">
+              <i data-lucide="clock" class="preference-item__icon"></i>
+              Daily Digest
+            </span>
+            <div class="toggle-switch is-active" data-pref="digest">
+              <div class="toggle-switch__thumb"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Current Subscriptions -->
+        <div class="current-subscriptions">
+          <h3 class="current-subscriptions__title">Active Subscriptions</h3>
+          <div class="subscription-list" id="subscription-list">
+            <div class="subscription-item">
+              <div class="subscription-item__info">
+                <span class="subscription-item__type">Health Risk Alerts</span>
+                <span class="subscription-item__details">Global • Medium & Above • Dashboard + Email</span>
+              </div>
+              <div class="subscription-item__actions">
+                <button class="subscription-item__btn subscription-item__btn--edit">Edit</button>
+                <button class="subscription-item__btn subscription-item__btn--remove">Remove</button>
+              </div>
+            </div>
+            <div class="subscription-item">
+              <div class="subscription-item__info">
+                <span class="subscription-item__type">Flight Risk Alerts</span>
+                <span class="subscription-item__details">North America • High & Above • All Channels</span>
+              </div>
+              <div class="subscription-item__actions">
+                <button class="subscription-item__btn subscription-item__btn--edit">Edit</button>
+                <button class="subscription-item__btn subscription-item__btn--remove">Remove</button>
+              </div>
+            </div>
+            <div class="subscription-item">
+              <div class="subscription-item__info">
+                <span class="subscription-item__type">Economic Risk Alerts</span>
+                <span class="subscription-item__details">United States • Critical Only • Dashboard</span>
+              </div>
+              <div class="subscription-item__actions">
+                <button class="subscription-item__btn subscription-item__btn--edit">Edit</button>
+                <button class="subscription-item__btn subscription-item__btn--remove">Remove</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+      <div class="footer__container">
+        <div class="footer__main">
+          <div class="footer__brand">
+            <a href="index.html" class="footer__logo">
+              <div class="footer__logo-icon">
+                <svg viewBox="0 0 100 100" width="48" height="48" aria-hidden="true">
+                  <circle cx="50" cy="50" r="45" fill="#7C3AED"/>
+                  <circle cx="50" cy="50" r="35" fill="none" stroke="#FFFFFF" stroke-width="3"/>
+                  <circle cx="50" cy="50" r="15" fill="#FFFFFF"/>
+                </svg>
+              </div>
+              <div class="footer__logo-text">
+                <span class="footer__logo-title">GeoForecast</span>
+                <span class="footer__logo-tagline">Global Threat Intelligence</span>
+              </div>
+            </a>
+            <p class="footer__description">
+              Advanced geopolitical forecasting using game theory, astrological patterns, 
+              and data-driven analytics to provide actionable intelligence for decision makers.
+            </p>
+            <div class="footer__social">
+              <a href="#" class="footer__social-link" aria-label="Twitter">
+                <i data-lucide="twitter" aria-hidden="true"></i>
+              </a>
+              <a href="#" class="footer__social-link" aria-label="LinkedIn">
+                <i data-lucide="linkedin" aria-hidden="true"></i>
+              </a>
+              <a href="#" class="footer__social-link" aria-label="GitHub">
+                <i data-lucide="github" aria-hidden="true"></i>
+              </a>
+              <a href="#" class="footer__social-link" aria-label="RSS Feed">
+                <i data-lucide="rss" aria-hidden="true"></i>
+              </a>
+            </div>
+          </div>
+
+          <div class="footer__column">
+            <h3 class="footer__heading">Quick Links</h3>
+            <ul class="footer__links">
+              <li><a href="index.html" class="footer__link">Global Overview</a></li>
+              <li><a href="predictions.html" class="footer__link">Predictions Hub</a></li>
+              <li><a href="timeline.html" class="footer__link">Events Timeline</a></li>
+              <li><a href="alerts.html" class="footer__link">Alert Center</a></li>
+              <li><a href="settings.html" class="footer__link">Settings</a></li>
+            </ul>
+          </div>
+
+          <div class="footer__column">
+            <h3 class="footer__heading">Resources</h3>
+            <ul class="footer__links">
+              <li><a href="#documentation" class="footer__link">Documentation</a></li>
+              <li><a href="#api" class="footer__link">API Reference</a></li>
+              <li><a href="#methodology" class="footer__link">Methodology</a></li>
+              <li><a href="#data-sources" class="footer__link">Data Sources</a></li>
+              <li><a href="#faq" class="footer__link">FAQ</a></li>
+            </ul>
+          </div>
+
+          <div class="footer__column">
+            <h3 class="footer__heading">Contact</h3>
+            <ul class="footer__links">
+              <li><a href="#about" class="footer__link">About Us</a></li>
+              <li><a href="#contact" class="footer__link">Contact Support</a></li>
+              <li><a href="#feedback" class="footer__link">Send Feedback</a></li>
+              <li><a href="#report" class="footer__link">Report an Issue</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="footer__attribution">
+          <div class="footer__attribution-content">
+            <i data-lucide="database" class="footer__attribution-icon" aria-hidden="true"></i>
+            <span class="footer__attribution-text">
+              Data sources: WHO, World Bank, UN, NOAA, USGS, ECDC, and other public health 
+              and safety organizations. Predictions are algorithmic estimates and should not 
+              be considered as definitive forecasts.
+            </span>
+          </div>
+        </div>
+
+        <div class="footer__bottom">
+          <div class="footer__legal">
+            <span class="footer__copyright">
+              &copy; <span id="footer-year">2024</span> GeoForecast. All rights reserved.
+            </span>
+            <nav class="footer__legal-nav" aria-label="Legal links">
+              <a href="#privacy" class="footer__legal-link">Privacy Policy</a>
+              <a href="#terms" class="footer__legal-link">Terms of Service</a>
+              <a href="#cookies" class="footer__legal-link">Cookie Policy</a>
+              <a href="#accessibility" class="footer__legal-link">Accessibility</a>
+            </nav>
+          </div>
+          <div class="footer__version">
+            <span class="footer__version-label">Version</span>
+            <span class="footer__version-number">1.0.0</span>
+            <span class="footer__version-separator">|</span>
+            <span class="footer__build">Build 2024.01.15</span>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </main>
+
+  <!-- Alert Detail Modal -->
+  <div class="modal" id="alert-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal__backdrop" data-close-modal></div>
+    <div class="modal__content">
+      <div class="modal__header">
+        <div class="modal__title-section">
+          <div class="modal__type">
+            <i data-lucide="alert-triangle" class="modal__type-icon" id="modal-type-icon"></i>
+            <span id="modal-type-label">Health Risk Alert</span>
+          </div>
+          <h2 class="modal__title" id="modal-title">Ebola Outbreak Declared in Eastern Region</h2>
+        </div>
+        <button class="modal__close" data-close-modal aria-label="Close modal">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="modal__body">
+        <div class="modal__section">
+          <h3 class="modal__section-title">Description</h3>
+          <p class="modal__description" id="modal-description">
+            Health authorities have confirmed an Ebola outbreak in the eastern region. 
+            Initial cases reported in three districts. Emergency response teams deployed. 
+            Travel restrictions may be implemented.
+          </p>
+        </div>
+
+        <div class="modal__section">
+          <h3 class="modal__section-title">Details</h3>
+          <div class="modal__meta-grid">
+            <div class="modal__meta-item">
+              <span class="modal__meta-label">Severity</span>
+              <span class="modal__meta-value" id="modal-severity">
+                <span class="w-2 h-2 rounded-full bg-red-600 mr-2"></span>
+                Critical
+              </span>
+            </div>
+            <div class="modal__meta-item">
+              <span class="modal__meta-label">Location</span>
+              <span class="modal__meta-value" id="modal-location">
+                <i data-lucide="map-pin" class="w-4 h-4"></i>
+                Democratic Republic of Congo
+              </span>
+            </div>
+            <div class="modal__meta-item">
+              <span class="modal__meta-label">Reported</span>
+              <span class="modal__meta-value" id="modal-timestamp">
+                <i data-lucide="clock" class="w-4 h-4"></i>
+                2 hours ago
+              </span>
+            </div>
+            <div class="modal__meta-item">
+              <span class="modal__meta-label">Source</span>
+              <span class="modal__meta-value" id="modal-source">
+                <i data-lucide="database" class="w-4 h-4"></i>
+                WHO
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal__section">
+          <h3 class="modal__section-title">Recommended Actions</h3>
+          <div class="modal__actions-list" id="modal-actions">
+            <div class="modal__action-item">
+              <i data-lucide="shield" class="modal__action-icon"></i>
+              <div class="modal__action-content">
+                <div class="modal__action-title">Avoid Non-Essential Travel</div>
+                <div class="modal__action-desc">Postpone travel to affected regions until situation stabilizes</div>
+              </div>
+            </div>
+            <div class="modal__action-item">
+              <i data-lucide="heart-pulse" class="modal__action-icon"></i>
+              <div class="modal__action-content">
+                <div class="modal__action-title">Monitor Health Symptoms</div>
+                <div class="modal__action-desc">Watch for fever, fatigue, muscle pain, headache, and sore throat</div>
+              </div>
+            </div>
+            <div class="modal__action-item">
+              <i data-lucide="phone" class="modal__action-icon"></i>
+              <div class="modal__action-content">
+                <div class="modal__action-title">Contact Health Authorities</div>
+                <div class="modal__action-desc">Report any symptoms immediately to local health authorities</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal__section">
+          <h3 class="modal__section-title">Related Alerts</h3>
+          <div class="related-alerts" id="modal-related">
+            <div class="related-alert">
+              <i data-lucide="heart-pulse" class="related-alert__icon text-orange-500"></i>
+              <div class="related-alert__content">
+                <div class="related-alert__title">Marburg Virus Cases Reported in Neighboring Region</div>
+                <div class="related-alert__meta">3 hours ago • High Severity</div>
+              </div>
+            </div>
+            <div class="related-alert">
+              <i data-lucide="plane" class="related-alert__icon text-yellow-500"></i>
+              <div class="related-alert__content">
+                <div class="related-alert__title">Flight Restrictions to Affected Areas</div>
+                <div class="related-alert__meta">5 hours ago • Medium Severity</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal__footer">
+        <button class="btn btn-secondary" id="modal-acknowledge">
+          <i data-lucide="check" class="w-4 h-4"></i>
+          <span>Acknowledge</span>
+        </button>
+        <button class="btn btn-primary" id="modal-share">
+          <i data-lucide="share-2" class="w-4 h-4"></i>
+          <span>Share Alert</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="../shared/scripts.js"></script>
+  <script>
+    // ============================================
+    // Alert Center Page JavaScript
+    // ============================================
+
+    // Sample alert data
+    const alertData = [
+      {
+        id: 1,
+        type: 'health',
+        severity: 'critical',
+        title: 'Ebola Outbreak Declared in Eastern Region',
+        description: 'Health authorities have confirmed an Ebola outbreak in the eastern region. Initial cases reported in three districts.',
+        location: 'Democratic Republic of Congo',
+        country: 'CD',
+        region: 'africa',
+        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+        source: 'WHO',
+        isNew: true,
+        acknowledged: false,
+        actions: [
+          { icon: 'shield', title: 'Avoid Non-Essential Travel', desc: 'Postpone travel to affected regions' },
+          { icon: 'heart-pulse', title: 'Monitor Health Symptoms', desc: 'Watch for fever, fatigue, muscle pain' },
+          { icon: 'phone', title: 'Contact Health Authorities', desc: 'Report any symptoms immediately' }
+        ],
+        related: [2, 3]
+      },
+      {
+        id: 2,
+        type: 'health',
+        severity: 'high',
+        title: 'Marburg Virus Cases Reported in Neighboring Region',
+        description: 'Three confirmed cases of Marburg virus disease detected. Contact tracing underway.',
+        location: 'Uganda',
+        country: 'UG',
+        region: 'africa',
+        timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+        source: 'CDC',
+        isNew: true,
+        acknowledged: false,
+        actions: [
+          { icon: 'shield', title: 'Avoid Affected Areas', desc: 'Stay away from outbreak zones' },
+          { icon: 'heart-pulse', title: 'Practice Hygiene', desc: 'Wash hands frequently' }
+        ],
+        related: [1]
+      },
+      {
+        id: 3,
+        type: 'flight',
+        severity: 'medium',
+        title: 'Flight Restrictions to Affected Areas',
+        description: 'Multiple airlines have suspended flights to outbreak-affected regions. Check with your carrier.',
+        location: 'East Africa',
+        country: '',
+        region: 'africa',
+        timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+        source: 'IATA',
+        isNew: false,
+        acknowledged: false,
+        actions: [
+          { icon: 'plane', title: 'Check Flight Status', desc: 'Verify with your airline before travel' },
+          { icon: 'calendar', title: 'Consider Rescheduling', desc: 'Postpone non-essential travel' }
+        ],
+        related: [1, 2]
+      },
+      {
+        id: 4,
+        type: 'economic',
+        severity: 'high',
+        title: 'Currency Devaluation Expected in Q4',
+        description: 'Economic indicators suggest significant currency devaluation. Inflation projected to reach 25%.',
+        location: 'Argentina',
+        country: 'AR',
+        region: 'south-america',
+        timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
+        source: 'IMF',
+        isNew: true,
+        acknowledged: false,
+        actions: [
+          { icon: 'trending-up', title: 'Diversify Assets', desc: 'Consider foreign currency holdings' },
+          { icon: 'shopping-cart', title: 'Stock Essential Goods', desc: 'Purchase necessities before price increases' }
+        ],
+        related: [5]
+      },
+      {
+        id: 5,
+        type: 'economic',
+        severity: 'medium',
+        title: 'Banking Sector Instability Concerns',
+        description: 'Multiple financial institutions showing stress indicators. Monitor your deposits.',
+        location: 'Buenos Aires, Argentina',
+        country: 'AR',
+        region: 'south-america',
+        timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+        source: 'Central Bank',
+        isNew: false,
+        acknowledged: false,
+        actions: [
+          { icon: 'landmark', title: 'Review Bank Deposits', desc: 'Ensure funds are within insured limits' },
+          { icon: 'wallet', title: 'Diversify Holdings', desc: 'Consider multiple banking institutions' }
+        ],
+        related: [4]
+      },
+      {
+        id: 6,
+        type: 'contamination',
+        severity: 'critical',
+        title: 'Chemical Spill in Industrial Zone',
+        description: 'Major chemical spill reported at petrochemical facility. Evacuation ordered for 5km radius.',
+        location: 'Mumbai, India',
+        country: 'IN',
+        region: 'asia',
+        timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+        source: 'Local Authority',
+        isNew: true,
+        acknowledged: false,
+        actions: [
+          { icon: 'move', title: 'Evacuate Immediately', desc: 'Leave the affected area if within 5km' },
+          { icon: 'wind', title: 'Stay Indoors', desc: 'Close windows and turn off ventilation' },
+          { icon: 'radio', title: 'Monitor Official Updates', desc: 'Follow emergency broadcast instructions' }
+        ],
+        related: []
+      },
+      {
+        id: 7,
+        type: 'travel',
+        severity: 'high',
+        title: 'Civil Unrest Escalating in Capital',
+        description: 'Large-scale protests turning violent. Government buildings targeted. Curfew in effect.',
+        location: 'Bangkok, Thailand',
+        country: 'TH',
+        region: 'asia',
+        timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+        source: 'Embassy Alert',
+        isNew: true,
+        acknowledged: false,
+        actions: [
+          { icon: 'home', title: 'Shelter in Place', desc: 'Avoid public areas and demonstrations' },
+          { icon: 'phone', title: 'Register with Embassy', desc: 'Ensure your government knows your location' },
+          { icon: 'shield', title: 'Have Emergency Kit Ready', desc: 'Prepare for extended stay indoors' }
+        ],
+        related: [8]
+      },
+      {
+        id: 8,
+        type: 'tourist',
+        severity: 'medium',
+        title: 'Tourist Areas Affected by Protests',
+        description: 'Popular tourist districts experiencing disruptions. Some attractions closed indefinitely.',
+        location: 'Bangkok, Thailand',
+        country: 'TH',
+        region: 'asia',
+        timestamp: new Date(Date.now() - 7 * 60 * 60 * 1000).toISOString(),
+        source: 'Tourism Authority',
+        isNew: false,
+        acknowledged: false,
+        actions: [
+          { icon: 'map', title: 'Avoid Protest Areas', desc: 'Check maps for safe zones' },
+          { icon: 'hotel', title: 'Confirm Accommodation', desc: 'Verify your hotel is in a safe area' }
+        ],
+        related: [7]
+      },
+      {
+        id: 9,
+        type: 'living',
+        severity: 'critical',
+        title: 'Active Shooter Reported in Shopping District',
+        description: 'Police responding to active shooter situation. Multiple casualties reported. Area locked down.',
+        location: 'Sydney, Australia',
+        country: 'AU',
+        region: 'oceania',
+        timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+        source: 'Police',
+        isNew: true,
+        acknowledged: false,
+        actions: [
+          { icon: 'move', title: 'Run, Hide, Fight', desc: 'Follow active shooter protocols' },
+          { icon: 'phone', title: 'Call Emergency Services', desc: 'Report your location and status' },
+          { icon: 'message-circle', title: 'Stay Silent', desc: 'Silence phone and stay quiet if hiding' }
+        ],
+        related: []
+      },
+      {
+        id: 10,
+        type: 'health',
+        severity: 'medium',
+        title: 'Air Quality Advisory Extended',
+        description: 'Wildfire smoke causing hazardous air quality. Advisory extended for next 48 hours.',
+        location: 'Los Angeles, USA',
+        country: 'US',
+        region: 'north-america',
+        timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+        source: 'EPA',
+        isNew: false,
+        acknowledged: false,
+        actions: [
+          { icon: 'wind', title: 'Limit Outdoor Activity', desc: 'Stay indoors as much as possible' },
+          { icon: 'filter', title: 'Use Air Purifiers', desc: 'Run HEPA filters indoors' },
+          { icon: 'mask', title: 'Wear N95 Masks', desc: 'Use proper masks if going outside' }
+        ],
+        related: []
+      },
+      {
+        id: 11,
+        type: 'economic',
+        severity: 'low',
+        title: 'Stock Market Volatility Expected',
+        description: 'Analysts predict increased market volatility due to upcoming policy announcements.',
+        location: 'Global',
+        country: '',
+        region: '',
+        timestamp: new Date(Date.now() - 10 * 60 * 60 * 1000).toISOString(),
+        source: 'Financial Times',
+        isNew: false,
+        acknowledged: false,
+        actions: [
+          { icon: 'trending-up', title: 'Review Portfolio', desc: 'Assess risk tolerance' },
+          { icon: 'dollar-sign', title: 'Consider Safe Havens', desc: 'Look into stable investments' }
+        ],
+        related: []
+      },
+      {
+        id: 12,
+        type: 'flight',
+        severity: 'high',
+        title: 'Airspace Closure Due to Military Activity',
+        description: 'Temporary airspace closure affecting all commercial flights. Duration unknown.',
+        location: 'Eastern Europe',
+        country: '',
+        region: 'europe',
+        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+        source: 'Eurocontrol',
+        isNew: true,
+        acknowledged: false,
+        actions: [
+          { icon: 'plane', title: 'Check Flight Status', desc: 'Contact airline for rebooking options' },
+          { icon: 'calendar', title: 'Expect Delays', desc: 'Plan for extended travel time' }
+        ],
+        related: []
+      }
+    ];
+
+    // Alert type icons mapping
+    const alertTypeIcons = {
+      contamination: 'biohazard',
+      flight: 'plane',
+      travel: 'map',
+      tourist: 'camera',
+      living: 'skull',
+      health: 'heart-pulse',
+      economic: 'trending-down'
+    };
+
+    // Alert type labels
+    const alertTypeLabels = {
+      contamination: 'Contamination',
+      flight: 'Flight Risk',
+      travel: 'Travel Risk',
+      tourist: 'Tourist Risk',
+      living: 'Living/Death Risk',
+      health: 'Health Risk',
+      economic: 'Economic Risk'
+    };
+
+    // State
+    let currentFilters = {
+      type: 'all',
+      severity: ['critical', 'high', 'medium', 'low', 'info'],
+      region: '',
+      country: '',
+      city: ''
+    };
+    let currentSort = 'newest';
+    let currentPage = 1;
+    const itemsPerPage = 12;
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+      initializeLucideIcons();
+      renderAlertCards();
+      setupEventListeners();
+      updateStatistics();
+    });
+
+    // Initialize Lucide icons
+    function initializeLucideIcons() {
+      if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+      }
+    }
+
+    // Format relative time
+    function formatRelativeTime(dateString) {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffSecs = Math.floor(diffMs / 1000);
+      const diffMins = Math.floor(diffSecs / 60);
+      const diffHours = Math.floor(diffMins / 60);
+      const diffDays = Math.floor(diffHours / 24);
+
+      if (diffSecs < 60) return 'Just now';
+      if (diffMins < 60) return `${diffMins}m ago`;
+      if (diffHours < 24) return `${diffHours}h ago`;
+      if (diffDays < 7) return `${diffDays}d ago`;
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+    // Filter alerts
+    function filterAlerts() {
+      return alertData.filter(alert => {
+        // Type filter
+        if (currentFilters.type !== 'all' && alert.type !== currentFilters.type) {
+          return false;
+        }
+        // Severity filter
+        if (!currentFilters.severity.includes(alert.severity)) {
+          return false;
+        }
+        // Region filter
+        if (currentFilters.region && alert.region !== currentFilters.region) {
+          return false;
+        }
+        // Country filter
+        if (currentFilters.country && alert.country !== currentFilters.country) {
+          return false;
+        }
+        return true;
+      });
+    }
+
+    // Sort alerts
+    function sortAlerts(alerts) {
+      return alerts.sort((a, b) => {
+        switch (currentSort) {
+          case 'newest':
+            return new Date(b.timestamp) - new Date(a.timestamp);
+          case 'severity':
+            const severityOrder = { critical: 5, high: 4, medium: 3, low: 2, info: 1 };
+            return severityOrder[b.severity] - severityOrder[a.severity];
+          case 'location':
+            return a.location.localeCompare(b.location);
+          case 'type':
+            return a.type.localeCompare(b.type);
+          default:
+            return 0;
+        }
+      });
+    }
+
+    // Render alert cards
+    function renderAlertCards() {
+      const container = document.getElementById('alert-cards');
+      const emptyState = document.getElementById('empty-state');
+      
+      let filtered = filterAlerts();
+      filtered = sortAlerts(filtered);
+
+      // Pagination
+      const totalPages = Math.ceil(filtered.length / itemsPerPage);
+      const start = (currentPage - 1) * itemsPerPage;
+      const paginated = filtered.slice(start, start + itemsPerPage);
+
+      // Update counts
+      document.getElementById('showing-count').textContent = Math.min(paginated.length, filtered.length);
+      document.getElementById('total-count').textContent = filtered.length;
+
+      // Show/hide empty state
+      if (filtered.length === 0) {
+        container.style.display = 'none';
+        emptyState.style.display = 'flex';
+        return;
+      } else {
+        container.style.display = 'grid';
+        emptyState.style.display = 'none';
+      }
+
+      // Render cards
+      container.innerHTML = paginated.map((alert, index) => `
+        <div class="alert-card alert-card--${alert.severity} ${alert.isNew ? 'is-new' : ''}" 
+             data-id="${alert.id}"
+             style="animation: fadeInUp 0.3s ease-out ${index * 0.05}s both;">
+          <div class="alert-card__header">
+            <div class="alert-card__type">
+              <i data-lucide="${alertTypeIcons[alert.type]}" class="alert-card__type-icon"></i>
+              <span class="alert-card__badge">${alert.severity}</span>
+            </div>
+          </div>
+          <h3 class="alert-card__title">${alert.title}</h3>
+          <p class="alert-card__description">${alert.description}</p>
+          <div class="alert-card__meta">
+            <span class="alert-card__meta-item">
+              <i data-lucide="map-pin"></i>
+              ${alert.location}
+            </span>
+            <span class="alert-card__meta-item">
+              <i data-lucide="clock"></i>
+              ${formatRelativeTime(alert.timestamp)}
+            </span>
+            ${alert.isNew ? `
+              <span class="alert-card__meta-item" style="color: var(--color-alert-info);">
+                <i data-lucide="sparkles"></i>
+                New
+              </span>
+            ` : ''}
+          </div>
+          <div class="alert-card__actions">
+            <button class="alert-card__acknowledge ${alert.acknowledged ? 'is-acknowledged' : ''}" 
+                    data-id="${alert.id}"
+                    onclick="event.stopPropagation(); acknowledgeAlert(${alert.id})">
+              <i data-lucide="${alert.acknowledged ? 'check-circle' : 'check'}"></i>
+              <span>${alert.acknowledged ? 'Acknowledged' : 'Acknowledge'}</span>
+            </button>
+            <span class="alert-card__details">
+              View Details
+              <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </span>
+          </div>
+        </div>
+      `).join('');
+
+      // Add click handlers
+      container.querySelectorAll('.alert-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const alertId = parseInt(card.dataset.id);
+          openAlertModal(alertId);
+        });
+      });
+
+      // Re-initialize icons
+      initializeLucideIcons();
+
+      // Update pagination
+      updatePagination(totalPages);
+    }
+
+    // Update pagination
+    function updatePagination(totalPages) {
+      const pagination = document.getElementById('pagination');
+      if (totalPages <= 1) {
+        pagination.style.display = 'none';
+        return;
+      }
+      pagination.style.display = 'flex';
+
+      let pages = [];
+      if (totalPages <= 5) {
+        for (let i = 1; i <= totalPages; i++) pages.push(i);
+      } else {
+        if (currentPage <= 3) {
+          pages = [1, 2, 3, 4, '...', totalPages];
+        } else if (currentPage >= totalPages - 2) {
+          pages = [1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+        } else {
+          pages = [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
+        }
+      }
+
+      pagination.innerHTML = `
+        <button class="pagination__btn" data-page="prev" ${currentPage === 1 ? 'disabled' : ''}>
+          <i data-lucide="chevron-left" class="w-4 h-4"></i>
+        </button>
+        ${pages.map(p => {
+          if (p === '...') {
+            return '<span class="pagination__btn" style="cursor: default;">...</span>';
+          }
+          return `<button class="pagination__btn ${p === currentPage ? 'is-active' : ''}" data-page="${p}">${p}</button>`;
+        }).join('')}
+        <button class="pagination__btn" data-page="next" ${currentPage === totalPages ? 'disabled' : ''}>
+          <i data-lucide="chevron-right" class="w-4 h-4"></i>
+        </button>
+      `;
+
+      // Add pagination handlers
+      pagination.querySelectorAll('[data-page]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const page = btn.dataset.page;
+          if (page === 'prev') {
+            if (currentPage > 1) currentPage--;
+          } else if (page === 'next') {
+            if (currentPage < totalPages) currentPage++;
+          } else {
+            currentPage = parseInt(page);
+          }
+          renderAlertCards();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+      });
+
+      initializeLucideIcons();
+    }
+
+    // Update statistics
+    function updateStatistics() {
+      const stats = {
+        total: alertData.filter(a => !a.acknowledged).length,
+        critical: alertData.filter(a => a.severity === 'critical' && !a.acknowledged).length,
+        high: alertData.filter(a => a.severity === 'high' && !a.acknowledged).length,
+        medium: alertData.filter(a => a.severity === 'medium' && !a.acknowledged).length,
+        low: alertData.filter(a => a.severity === 'low' && !a.acknowledged).length,
+        new: alertData.filter(a => a.isNew && !a.acknowledged).length
+      };
+
+      document.getElementById('stat-total').textContent = stats.total;
+      document.getElementById('stat-critical').textContent = stats.critical;
+      document.getElementById('stat-high').textContent = stats.high;
+      document.getElementById('stat-medium').textContent = stats.medium;
+      document.getElementById('stat-low').textContent = stats.low;
+      document.getElementById('stat-new').textContent = stats.new;
+
+      // Update sidebar badge
+      const badge = document.getElementById('alert-badge');
+      if (badge) {
+        badge.textContent = stats.total;
+        badge.style.display = stats.total > 0 ? 'block' : 'none';
+      }
+    }
+
+    // Acknowledge alert
+    function acknowledgeAlert(id) {
+      const alert = alertData.find(a => a.id === id);
+      if (alert) {
+        alert.acknowledged = !alert.acknowledged;
+        renderAlertCards();
+        updateStatistics();
+        showToast(
+          alert.acknowledged ? 'success' : 'info',
+          alert.acknowledged ? 'Alert Acknowledged' : 'Alert Unacknowledged',
+          alert.acknowledged ? 'The alert has been marked as read.' : 'The alert has been marked as unread.'
+        );
+      }
+    }
+
+    // Mark all as read
+    function markAllAsRead() {
+      alertData.forEach(alert => alert.acknowledged = true);
+      renderAlertCards();
+      updateStatistics();
+      showToast('success', 'All Alerts Acknowledged', 'All alerts have been marked as read.');
+    }
+
+    // Open alert modal
+    function openAlertModal(alertId) {
+      const alert = alertData.find(a => a.id === alertId);
+      if (!alert) return;
+
+      document.getElementById('modal-type-icon').setAttribute('data-lucide', alertTypeIcons[alert.type]);
+      document.getElementById('modal-type-label').textContent = alertTypeLabels[alert.type] + ' Alert';
+      document.getElementById('modal-title').textContent = alert.title;
+      document.getElementById('modal-description').textContent = alert.description;
+      
+      const severityColors = {
+        critical: 'bg-red-600',
+        high: 'bg-orange-500',
+        medium: 'bg-yellow-500',
+        low: 'bg-green-500',
+        info: 'bg-blue-500'
+      };
+      document.getElementById('modal-severity').innerHTML = `
+        <span class="w-2 h-2 rounded-full ${severityColors[alert.severity]} mr-2"></span>
+        ${alert.severity.charAt(0).toUpperCase() + alert.severity.slice(1)}
+      `;
+      document.getElementById('modal-location').innerHTML = `
+        <i data-lucide="map-pin" class="w-4 h-4"></i>
+        ${alert.location}
+      `;
+      document.getElementById('modal-timestamp').innerHTML = `
+        <i data-lucide="clock" class="w-4 h-4"></i>
+        ${formatRelativeTime(alert.timestamp)}
+      `;
+      document.getElementById('modal-source').innerHTML = `
+        <i data-lucide="database" class="w-4 h-4"></i>
+        ${alert.source}
+      `;
+
+      // Actions
+      const actionsContainer = document.getElementById('modal-actions');
+      actionsContainer.innerHTML = alert.actions.map(action => `
+        <div class="modal__action-item">
+          <i data-lucide="${action.icon}" class="modal__action-icon"></i>
+          <div class="modal__action-content">
+            <div class="modal__action-title">${action.title}</div>
+            <div class="modal__action-desc">${action.desc}</div>
+          </div>
+        </div>
+      `).join('');
+
+      // Related alerts
+      const relatedContainer = document.getElementById('modal-related');
+      if (alert.related && alert.related.length > 0) {
+        const relatedAlerts = alertData.filter(a => alert.related.includes(a.id));
+        relatedContainer.innerHTML = relatedAlerts.map(related => `
+          <div class="related-alert" data-id="${related.id}">
+            <i data-lucide="${alertTypeIcons[related.type]}" class="related-alert__icon text-${related.severity === 'critical' ? 'red' : related.severity === 'high' ? 'orange' : related.severity === 'medium' ? 'yellow' : 'green'}-500"></i>
+            <div class="related-alert__content">
+              <div class="related-alert__title">${related.title}</div>
+              <div class="related-alert__meta">${formatRelativeTime(related.timestamp)} • ${related.severity.charAt(0).toUpperCase() + related.severity.slice(1)} Severity</div>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        relatedContainer.innerHTML = '<p class="text-sm text-gray-500">No related alerts</p>';
+      }
+
+      // Acknowledge button
+      const ackBtn = document.getElementById('modal-acknowledge');
+      ackBtn.innerHTML = `
+        <i data-lucide="${alert.acknowledged ? 'check-circle' : 'check'}" class="w-4 h-4"></i>
+        <span>${alert.acknowledged ? 'Acknowledged' : 'Acknowledge'}</span>
+      `;
+      ackBtn.onclick = () => {
+        acknowledgeAlert(alert.id);
+        closeModal();
+      };
+
+      // Show modal
+      document.getElementById('alert-modal').classList.add('is-open');
+      document.body.style.overflow = 'hidden';
+
+      initializeLucideIcons();
+
+      // Add related alert click handlers
+      relatedContainer.querySelectorAll('.related-alert').forEach(el => {
+        el.addEventListener('click', () => {
+          const id = parseInt(el.dataset.id);
+          closeModal();
+          setTimeout(() => openAlertModal(id), 300);
+        });
+      });
+    }
+
+    // Close modal
+    function closeModal() {
+      document.getElementById('alert-modal').classList.remove('is-open');
+      document.body.style.overflow = '';
+    }
+
+    // Show toast notification
+    function showToast(type, title, message) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast toast--${type}`;
+      
+      const iconMap = {
+        success: 'check-circle',
+        error: 'x-circle',
+        warning: 'alert-triangle',
+        info: 'info'
+      };
+
+      toast.innerHTML = `
+        <i data-lucide="${iconMap[type]}" class="toast__icon"></i>
+        <div class="toast__content">
+          <div class="toast__title">${title}</div>
+          <div class="toast__message">${message}</div>
+        </div>
+        <button class="toast__close" onclick="this.parentElement.remove()">
+          <i data-lucide="x"></i>
+        </button>
+      `;
+
+      container.appendChild(toast);
+      initializeLucideIcons();
+
+      setTimeout(() => {
+        toast.classList.add('toast--exit');
+        setTimeout(() => toast.remove(), 300);
+      }, 5000);
+    }
+
+    // Setup event listeners
+    function setupEventListeners() {
+      // Alert type filters
+      document.querySelectorAll('.alert-type-filter').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.alert-type-filter').forEach(b => b.classList.remove('is-active'));
+          btn.classList.add('is-active');
+          currentFilters.type = btn.dataset.type;
+          currentPage = 1;
+          renderAlertCards();
+        });
+      });
+
+      // Severity filters
+      document.querySelectorAll('.severity-filter').forEach(btn => {
+        btn.addEventListener('click', () => {
+          btn.classList.toggle('is-active');
+          const severity = btn.dataset.severity;
+          if (btn.classList.contains('is-active')) {
+            if (!currentFilters.severity.includes(severity)) {
+              currentFilters.severity.push(severity);
+            }
+          } else {
+            currentFilters.severity = currentFilters.severity.filter(s => s !== severity);
+          }
+          currentPage = 1;
+          renderAlertCards();
+        });
+      });
+
+      // Geographic filters
+      document.getElementById('region-select').addEventListener('change', (e) => {
+        currentFilters.region = e.target.value;
+        currentPage = 1;
+        renderAlertCards();
+      });
+
+      document.getElementById('country-select').addEventListener('change', (e) => {
+        currentFilters.country = e.target.value;
+        currentPage = 1;
+        renderAlertCards();
+      });
+
+      // Sort
+      document.getElementById('sort-select').addEventListener('change', (e) => {
+        currentSort = e.target.value;
+        renderAlertCards();
+      });
+
+      // Mark all as read
+      document.getElementById('mark-all-read').addEventListener('click', markAllAsRead);
+
+      // Export alerts
+      document.getElementById('export-alerts').addEventListener('click', () => {
+        showToast('info', 'Export Started', 'Your alerts are being exported to CSV.');
+      });
+
+      // Modal close buttons
+      document.querySelectorAll('[data-close-modal]').forEach(el => {
+        el.addEventListener('click', closeModal);
+      });
+
+      // Close modal on escape
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          closeModal();
+        }
+      });
+
+      // Toggle switches
+      document.querySelectorAll('.toggle-switch').forEach(toggle => {
+        toggle.addEventListener('click', () => {
+          toggle.classList.toggle('is-active');
+          const pref = toggle.dataset.pref;
+          showToast('success', 'Preference Updated', `${pref.charAt(0).toUpperCase() + pref.slice(1)} notifications ${toggle.classList.contains('is-active') ? 'enabled' : 'disabled'}.`);
+        });
+      });
+
+      // Add subscription
+      document.getElementById('add-subscription').addEventListener('click', () => {
+        const type = document.getElementById('sub-type').value;
+        if (!type) {
+          showToast('warning', 'Select Alert Type', 'Please select an alert type to subscribe.');
+          return;
+        }
+        showToast('success', 'Subscription Added', `You are now subscribed to ${alertTypeLabels[type]} alerts.`);
+      });
+
+      // Subscription item actions
+      document.querySelectorAll('.subscription-item__btn--remove').forEach(btn => {
+        btn.addEventListener('click', () => {
+          btn.closest('.subscription-item').remove();
+          showToast('info', 'Subscription Removed', 'Your subscription has been removed.');
+        });
+      });
+
+      // Footer year
+      document.getElementById('footer-year').textContent = new Date().getFullYear();
+    }
+
+    // Add fade in animation
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  </script>
+</body>
+</html>

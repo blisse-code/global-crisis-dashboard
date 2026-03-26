@@ -1,0 +1,2398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Timeline View | Geopolitical Forecast Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="../shared/styles.css">
+  <style>
+    /* Timeline Page Specific Styles */
+    .timeline-page {
+      min-height: 100vh;
+      background: var(--color-bg-main);
+    }
+
+    /* Timeline Header */
+    .timeline-header {
+      background: var(--color-card-bg);
+      border-bottom: 1px solid var(--color-border);
+      padding: var(--space-6) var(--page-padding);
+      position: sticky;
+      top: var(--header-height);
+      z-index: 50;
+    }
+
+    .timeline-header__content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: var(--space-4);
+    }
+
+    .timeline-header__title {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .timeline-header__title h1 {
+      font-size: var(--text-h3);
+      font-weight: var(--font-bold);
+      color: var(--color-text-primary);
+    }
+
+    .timeline-header__subtitle {
+      font-size: var(--text-body-sm);
+      color: var(--color-text-muted);
+    }
+
+    /* View Selector */
+    .view-selector {
+      display: flex;
+      align-items: center;
+      background: var(--color-bg-alt);
+      border-radius: var(--radius-lg);
+      padding: var(--space-1);
+    }
+
+    .view-selector__btn {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--radius-md);
+      font-size: var(--text-body-sm);
+      font-weight: var(--font-medium);
+      color: var(--color-text-secondary);
+      transition: var(--transition-fast);
+    }
+
+    .view-selector__btn:hover {
+      color: var(--color-text-primary);
+    }
+
+    .view-selector__btn.is-active {
+      background: var(--color-card-bg);
+      color: var(--color-primary);
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* Navigation Controls */
+    .timeline-controls {
+      background: var(--color-card-bg);
+      border-bottom: 1px solid var(--color-border);
+      padding: var(--space-4) var(--page-padding);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: var(--space-4);
+      position: sticky;
+      top: calc(var(--header-height) + 80px);
+      z-index: 40;
+    }
+
+    .timeline-controls__group {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .timeline-controls__label {
+      font-size: var(--text-caption);
+      font-weight: var(--font-semibold);
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: var(--tracking-overline);
+    }
+
+    /* Zoom Controls */
+    .zoom-controls {
+      display: flex;
+      align-items: center;
+      background: var(--color-bg-alt);
+      border-radius: var(--radius-lg);
+      padding: var(--space-1);
+    }
+
+    .zoom-btn {
+      padding: var(--space-2) var(--space-3);
+      border-radius: var(--radius-md);
+      font-size: var(--text-caption);
+      font-weight: var(--font-semibold);
+      color: var(--color-text-secondary);
+      transition: var(--transition-fast);
+    }
+
+    .zoom-btn:hover {
+      color: var(--color-text-primary);
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    .zoom-btn.is-active {
+      background: var(--color-primary);
+      color: var(--color-text-light);
+    }
+
+    /* Date Range Selector */
+    .date-range {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .date-input {
+      padding: var(--space-2) var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: var(--text-body-sm);
+      color: var(--color-text-primary);
+      background: var(--color-card-bg);
+    }
+
+    .date-input:focus {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.1);
+    }
+
+    /* Navigation Buttons */
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-md);
+      background: var(--color-bg-alt);
+      color: var(--color-text-secondary);
+      transition: var(--transition-fast);
+    }
+
+    .nav-btn:hover {
+      background: var(--color-primary);
+      color: var(--color-text-light);
+    }
+
+    .nav-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .today-btn {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-4);
+      background: var(--color-secondary);
+      color: var(--color-text-light);
+      border-radius: var(--radius-md);
+      font-size: var(--text-body-sm);
+      font-weight: var(--font-medium);
+      transition: var(--transition-fast);
+    }
+
+    .today-btn:hover {
+      background: var(--color-secondary-dark);
+    }
+
+    /* Play/Pause Button */
+    .play-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-full);
+      background: var(--color-primary);
+      color: var(--color-text-light);
+      transition: var(--transition-fast);
+    }
+
+    .play-btn:hover {
+      background: var(--color-primary-light);
+      transform: scale(1.05);
+    }
+
+    .play-btn.is-playing {
+      background: var(--color-alert-high);
+    }
+
+    /* Quick Filters */
+    .quick-filters {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .quick-filter-btn {
+      padding: var(--space-2) var(--space-3);
+      border-radius: var(--radius-full);
+      font-size: var(--text-caption);
+      font-weight: var(--font-semibold);
+      border: 1px solid var(--color-border);
+      color: var(--color-text-secondary);
+      transition: var(--transition-fast);
+    }
+
+    .quick-filter-btn:hover {
+      border-color: var(--color-primary);
+      color: var(--color-primary);
+    }
+
+    .quick-filter-btn.is-active {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+      color: var(--color-text-light);
+    }
+
+    /* Category Filters */
+    .category-filters {
+      background: var(--color-bg-alt);
+      border-bottom: 1px solid var(--color-border);
+      padding: var(--space-4) var(--page-padding);
+    }
+
+    .category-filters__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-4);
+    }
+
+    .category-filters__title {
+      font-size: var(--text-body-sm);
+      font-weight: var(--font-semibold);
+      color: var(--color-text-secondary);
+    }
+
+    .category-filters__actions {
+      display: flex;
+      gap: var(--space-2);
+    }
+
+    .category-filters__action {
+      font-size: var(--text-caption);
+      color: var(--color-primary);
+      font-weight: var(--font-medium);
+      transition: var(--transition-fast);
+    }
+
+    .category-filters__action:hover {
+      text-decoration: underline;
+    }
+
+    .category-filters__grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-3);
+    }
+
+    .category-filter {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-3);
+      background: var(--color-card-bg);
+      border: 2px solid transparent;
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      transition: var(--transition-fast);
+    }
+
+    .category-filter:hover {
+      border-color: var(--color-border-dark);
+    }
+
+    .category-filter.is-active {
+      border-color: var(--category-color);
+      background: rgba(var(--category-color-rgb), 0.05);
+    }
+
+    .category-filter__checkbox {
+      width: 18px;
+      height: 18px;
+      border-radius: var(--radius-sm);
+      border: 2px solid var(--color-border-dark);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition-fast);
+    }
+
+    .category-filter.is-active .category-filter__checkbox {
+      background: var(--category-color);
+      border-color: var(--category-color);
+    }
+
+    .category-filter__checkbox svg {
+      width: 12px;
+      height: 12px;
+      color: white;
+      opacity: 0;
+    }
+
+    .category-filter.is-active .category-filter__checkbox svg {
+      opacity: 1;
+    }
+
+    .category-filter__icon {
+      width: 20px;
+      height: 20px;
+      color: var(--category-color);
+    }
+
+    .category-filter__label {
+      font-size: var(--text-body-sm);
+      font-weight: var(--font-medium);
+      color: var(--color-text-primary);
+    }
+
+    .category-filter__count {
+      margin-left: auto;
+      padding: var(--space-1) var(--space-2);
+      background: var(--color-bg-alt);
+      border-radius: var(--radius-full);
+      font-size: var(--text-caption);
+      font-weight: var(--font-semibold);
+      color: var(--color-text-muted);
+    }
+
+    /* Category Colors */
+    .category-filter--political { --category-color: #1E3A5F; --category-color-rgb: 30, 58, 95; }
+    .category-filter--economic { --category-color: #E85D4E; --category-color-rgb: 232, 93, 78; }
+    .category-filter--health { --category-color: #14B8A6; --category-color-rgb: 20, 184, 166; }
+    .category-filter--security { --category-color: #DC2626; --category-color-rgb: 220, 38, 38; }
+    .category-filter--environmental { --category-color: #22C55E; --category-color-rgb: 34, 197, 94; }
+    .category-filter--social { --category-color: #7C3AED; --category-color-rgb: 124, 58, 237; }
+    .category-filter--technological { --category-color: #3B82F6; --category-color-rgb: 59, 130, 246; }
+    .category-filter--astrological { --category-color: #B8860B; --category-color-rgb: 184, 134, 11; }
+
+    /* Timeline Container */
+    .timeline-container {
+      padding: var(--space-12) var(--page-padding);
+      position: relative;
+      min-height: 800px;
+    }
+
+    /* Central Timeline Line */
+    .timeline-line {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: linear-gradient(to bottom, 
+        transparent 0%,
+        var(--color-border-dark) 5%,
+        var(--color-border-dark) 95%,
+        transparent 100%
+      );
+      transform: translateX(-50%);
+    }
+
+    /* Today Marker */
+    .today-marker {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .today-marker__dot {
+      width: 24px;
+      height: 24px;
+      border-radius: var(--radius-full);
+      background: var(--color-secondary);
+      border: 4px solid var(--color-card-bg);
+      box-shadow: var(--shadow-glow);
+      animation: pulse-glow 2s ease-in-out infinite;
+    }
+
+    .today-marker__label {
+      margin-top: var(--space-2);
+      padding: var(--space-1) var(--space-3);
+      background: var(--color-secondary);
+      color: var(--color-text-light);
+      border-radius: var(--radius-md);
+      font-size: var(--text-caption);
+      font-weight: var(--font-semibold);
+      white-space: nowrap;
+    }
+
+    /* Timeline Events */
+    .timeline-events {
+      position: relative;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .timeline-event {
+      position: relative;
+      margin-bottom: var(--space-8);
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity var(--duration-slow) var(--ease-out),
+                  transform var(--duration-slow) var(--ease-out);
+    }
+
+    .timeline-event.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .timeline-event.is-hidden {
+      display: none;
+    }
+
+    .timeline-event--left {
+      padding-right: calc(50% + var(--space-8));
+    }
+
+    .timeline-event--right {
+      padding-left: calc(50% + var(--space-8));
+    }
+
+    /* Event Node on Timeline */
+    .timeline-event__node {
+      position: absolute;
+      left: 50%;
+      top: 24px;
+      transform: translateX(-50%);
+      width: 16px;
+      height: 16px;
+      border-radius: var(--radius-full);
+      background: var(--event-color);
+      border: 3px solid var(--color-card-bg);
+      box-shadow: 0 0 0 2px var(--event-color);
+      z-index: 5;
+      transition: var(--transition-fast);
+    }
+
+    .timeline-event:hover .timeline-event__node {
+      transform: translateX(-50%) scale(1.3);
+    }
+
+    .timeline-event--predicted .timeline-event__node {
+      background: var(--color-card-bg);
+    }
+
+    /* Connector Line */
+    .timeline-event__connector {
+      position: absolute;
+      top: 31px;
+      height: 2px;
+      background: var(--event-color);
+      opacity: 0.3;
+    }
+
+    .timeline-event--left .timeline-event__connector {
+      right: 50%;
+      left: calc(50% - 200px);
+    }
+
+    .timeline-event--right .timeline-event__connector {
+      left: 50%;
+      right: calc(50% - 200px);
+    }
+
+    /* Event Card */
+    .event-card {
+      background: var(--color-card-bg);
+      border-radius: var(--radius-xl);
+      padding: var(--space-5);
+      box-shadow: var(--shadow-md);
+      border-left: 4px solid var(--event-color);
+      cursor: pointer;
+      transition: var(--transition-normal);
+      position: relative;
+    }
+
+    .event-card:hover {
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-2px);
+    }
+
+    .timeline-event--predicted .event-card {
+      border-style: dashed;
+      opacity: 0.85;
+    }
+
+    .timeline-event--predicted .event-card::before {
+      content: 'PREDICTED';
+      position: absolute;
+      top: var(--space-3);
+      right: var(--space-3);
+      padding: var(--space-1) var(--space-2);
+      background: rgba(var(--color-secondary-rgb), 0.1);
+      color: var(--color-secondary);
+      border-radius: var(--radius-sm);
+      font-size: var(--text-caption);
+      font-weight: var(--font-semibold);
+      letter-spacing: var(--tracking-wider);
+    }
+
+    /* Event Card Header */
+    .event-card__header {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-3);
+      margin-bottom: var(--space-3);
+    }
+
+    .event-card__icon {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-lg);
+      background: rgba(var(--event-color-rgb), 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .event-card__icon svg {
+      width: 20px;
+      height: 20px;
+      color: var(--event-color);
+    }
+
+    .event-card__meta {
+      flex: 1;
+    }
+
+    .event-card__date {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--text-caption);
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-1);
+    }
+
+    .event-card__date svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .event-card__title {
+      font-size: var(--text-h5);
+      font-weight: var(--font-semibold);
+      color: var(--color-text-primary);
+      line-height: var(--leading-snug);
+    }
+
+    /* Event Card Body */
+    .event-card__body {
+      margin-bottom: var(--space-3);
+    }
+
+    .event-card__description {
+      font-size: var(--text-body-sm);
+      color: var(--color-text-secondary);
+      line-height: var(--leading-loose);
+    }
+
+    /* Event Card Footer */
+    .event-card__footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+
+    .event-card__location {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+      font-size: var(--text-caption);
+      color: var(--color-text-muted);
+    }
+
+    .event-card__location svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .event-card__badges {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .event-card__badge {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+      padding: var(--space-1) var(--space-2);
+      border-radius: var(--radius-full);
+      font-size: var(--text-caption);
+      font-weight: var(--font-semibold);
+    }
+
+    .event-card__badge--severity {
+      background: rgba(var(--severity-color-rgb), 0.1);
+      color: var(--severity-color);
+    }
+
+    .event-card__badge--confidence {
+      background: rgba(var(--color-secondary-rgb), 0.1);
+      color: var(--color-secondary);
+    }
+
+    /* Confidence Indicator */
+    .confidence-bar {
+      margin-top: var(--space-3);
+      padding-top: var(--space-3);
+      border-top: 1px solid var(--color-border);
+    }
+
+    .confidence-bar__label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: var(--text-caption);
+      margin-bottom: var(--space-2);
+    }
+
+    .confidence-bar__text {
+      color: var(--color-text-muted);
+    }
+
+    .confidence-bar__value {
+      font-weight: var(--font-semibold);
+      color: var(--color-secondary);
+    }
+
+    .confidence-bar__track {
+      height: 6px;
+      background: var(--color-bg-alt);
+      border-radius: var(--radius-full);
+      overflow: hidden;
+    }
+
+    .confidence-bar__fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--color-secondary), var(--color-secondary-light));
+      border-radius: var(--radius-full);
+      transition: width var(--duration-slow) var(--ease-out);
+    }
+
+    /* Event Colors */
+    .timeline-event--political { --event-color: #1E3A5F; --event-color-rgb: 30, 58, 95; }
+    .timeline-event--economic { --event-color: #E85D4E; --event-color-rgb: 232, 93, 78; }
+    .timeline-event--health { --event-color: #14B8A6; --event-color-rgb: 20, 184, 166; }
+    .timeline-event--security { --event-color: #DC2626; --event-color-rgb: 220, 38, 38; }
+    .timeline-event--environmental { --event-color: #22C55E; --event-color-rgb: 34, 197, 94; }
+    .timeline-event--social { --event-color: #7C3AED; --event-color-rgb: 124, 58, 237; }
+    .timeline-event--technological { --event-color: #3B82F6; --event-color-rgb: 59, 130, 246; }
+    .timeline-event--astrological { --event-color: #B8860B; --event-color-rgb: 184, 134, 11; }
+
+    /* Severity Colors */
+    .severity--critical { --severity-color: #DC2626; --severity-color-rgb: 220, 38, 38; }
+    .severity--high { --severity-color: #F97316; --severity-color-rgb: 249, 115, 22; }
+    .severity--medium { --severity-color: #EAB308; --severity-color-rgb: 234, 179, 8; }
+    .severity--low { --severity-color: #22C55E; --severity-color-rgb: 34, 197, 94; }
+    .severity--info { --severity-color: #3B82F6; --severity-color-rgb: 59, 130, 246; }
+
+    /* Event Detail Modal */
+    .event-modal__content {
+      max-width: 700px;
+      width: 90vw;
+    }
+
+    .event-modal__header {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-4);
+      padding-bottom: var(--space-4);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .event-modal__icon {
+      width: 56px;
+      height: 56px;
+      border-radius: var(--radius-xl);
+      background: rgba(var(--event-color-rgb), 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .event-modal__icon svg {
+      width: 28px;
+      height: 28px;
+      color: var(--event-color);
+    }
+
+    .event-modal__meta {
+      flex: 1;
+    }
+
+    .event-modal__category {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+      padding: var(--space-1) var(--space-2);
+      background: rgba(var(--event-color-rgb), 0.1);
+      color: var(--event-color);
+      border-radius: var(--radius-sm);
+      font-size: var(--text-caption);
+      font-weight: var(--font-semibold);
+      text-transform: uppercase;
+      letter-spacing: var(--tracking-wider);
+      margin-bottom: var(--space-2);
+    }
+
+    .event-modal__title {
+      font-size: var(--text-h3);
+      font-weight: var(--font-bold);
+      color: var(--color-text-primary);
+      margin-bottom: var(--space-2);
+    }
+
+    .event-modal__date-location {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--text-body-sm);
+      color: var(--color-text-muted);
+    }
+
+    .event-modal__date-location span {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+    }
+
+    .event-modal__body {
+      padding: var(--space-6) 0;
+    }
+
+    .event-modal__section {
+      margin-bottom: var(--space-6);
+    }
+
+    .event-modal__section:last-child {
+      margin-bottom: 0;
+    }
+
+    .event-modal__section-title {
+      font-size: var(--text-body-sm);
+      font-weight: var(--font-semibold);
+      color: var(--color-text-secondary);
+      text-transform: uppercase;
+      letter-spacing: var(--tracking-overline);
+      margin-bottom: var(--space-3);
+    }
+
+    .event-modal__description {
+      font-size: var(--text-body);
+      color: var(--color-text-primary);
+      line-height: var(--leading-xl);
+    }
+
+    /* Related Alerts */
+    .related-alerts {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .related-alert {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3);
+      background: var(--color-bg-alt);
+      border-radius: var(--radius-lg);
+      transition: var(--transition-fast);
+    }
+
+    .related-alert:hover {
+      background: var(--color-border-light);
+    }
+
+    .related-alert__icon {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-md);
+      background: rgba(var(--severity-color-rgb), 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .related-alert__icon svg {
+      width: 18px;
+      height: 18px;
+      color: var(--severity-color);
+    }
+
+    .related-alert__content {
+      flex: 1;
+    }
+
+    .related-alert__title {
+      font-size: var(--text-body-sm);
+      font-weight: var(--font-medium);
+      color: var(--color-text-primary);
+    }
+
+    .related-alert__meta {
+      font-size: var(--text-caption);
+      color: var(--color-text-muted);
+    }
+
+    /* Source Links */
+    .source-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+
+    .source-link {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+      padding: var(--space-2) var(--space-3);
+      background: var(--color-bg-alt);
+      border-radius: var(--radius-md);
+      font-size: var(--text-body-sm);
+      color: var(--color-text-secondary);
+      transition: var(--transition-fast);
+    }
+
+    .source-link:hover {
+      background: var(--color-border);
+      color: var(--color-text-primary);
+    }
+
+    .source-link svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Prediction Details */
+    .prediction-details {
+      background: rgba(var(--color-secondary-rgb), 0.05);
+      border: 1px solid rgba(var(--color-secondary-rgb), 0.2);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+    }
+
+    .prediction-details__header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      margin-bottom: var(--space-3);
+    }
+
+    .prediction-details__header svg {
+      width: 20px;
+      height: 20px;
+      color: var(--color-secondary);
+    }
+
+    .prediction-details__title {
+      font-size: var(--text-body-sm);
+      font-weight: var(--font-semibold);
+      color: var(--color-secondary);
+    }
+
+    .prediction-details__grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-4);
+    }
+
+    .prediction-detail {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+
+    .prediction-detail__label {
+      font-size: var(--text-caption);
+      color: var(--color-text-muted);
+    }
+
+    .prediction-detail__value {
+      font-size: var(--text-body);
+      font-weight: var(--font-semibold);
+      color: var(--color-text-primary);
+    }
+
+    /* Confidence Bands Legend */
+    .confidence-legend {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-6);
+      padding: var(--space-4);
+      background: var(--color-bg-alt);
+      border-radius: var(--radius-lg);
+      margin-top: var(--space-6);
+    }
+
+    .confidence-legend__item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .confidence-legend__indicator {
+      width: 20px;
+      height: 20px;
+      border-radius: var(--radius-sm);
+    }
+
+    .confidence-legend__indicator--high {
+      background: var(--color-secondary);
+    }
+
+    .confidence-legend__indicator--medium {
+      background: linear-gradient(135deg, var(--color-secondary) 50%, transparent 50%);
+      border: 2px solid var(--color-secondary);
+    }
+
+    .confidence-legend__indicator--low {
+      background: transparent;
+      border: 2px dashed var(--color-secondary);
+    }
+
+    .confidence-legend__label {
+      font-size: var(--text-body-sm);
+      color: var(--color-text-secondary);
+    }
+
+    /* Loading State */
+    .timeline-loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-16);
+      gap: var(--space-4);
+    }
+
+    .timeline-loading__spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid var(--color-border);
+      border-top-color: var(--color-primary);
+      border-radius: var(--radius-full);
+      animation: spin 1s linear infinite;
+    }
+
+    .timeline-loading__text {
+      font-size: var(--text-body-sm);
+      color: var(--color-text-muted);
+    }
+
+    /* Empty State */
+    .timeline-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-16);
+      gap: var(--space-4);
+      text-align: center;
+    }
+
+    .timeline-empty__icon {
+      width: 64px;
+      height: 64px;
+      border-radius: var(--radius-full);
+      background: var(--color-bg-alt);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .timeline-empty__icon svg {
+      width: 32px;
+      height: 32px;
+      color: var(--color-text-muted);
+    }
+
+    .timeline-empty__title {
+      font-size: var(--text-h4);
+      font-weight: var(--font-semibold);
+      color: var(--color-text-primary);
+    }
+
+    .timeline-empty__description {
+      font-size: var(--text-body);
+      color: var(--color-text-secondary);
+      max-width: 400px;
+    }
+
+    /* Responsive Styles */
+    @media (max-width: 1023px) {
+      .timeline-controls {
+        top: var(--header-height);
+      }
+
+      .timeline-event--left,
+      .timeline-event--right {
+        padding-left: calc(var(--space-8) + 20px);
+        padding-right: var(--space-4);
+      }
+
+      .timeline-line {
+        left: 20px;
+      }
+
+      .timeline-event__node {
+        left: 20px;
+      }
+
+      .timeline-event__connector {
+        display: none;
+      }
+
+      .today-marker {
+        left: 20px;
+      }
+    }
+
+    @media (max-width: 639px) {
+      .timeline-header__content {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .timeline-controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .timeline-controls__group {
+        justify-content: center;
+      }
+
+      .category-filters__grid {
+        justify-content: center;
+      }
+
+      .event-card__footer {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .prediction-details__grid {
+        grid-template-columns: 1fr;
+      }
+
+      .confidence-legend {
+        flex-direction: column;
+        gap: var(--space-3);
+      }
+    }
+
+    /* Reduced Motion */
+    @media (prefers-reduced-motion: reduce) {
+      .timeline-event {
+        opacity: 1;
+        transform: none;
+        transition: none;
+      }
+
+      .today-marker__dot {
+        animation: none;
+      }
+
+      .timeline-loading__spinner {
+        animation: none;
+      }
+    }
+  </style>
+</head>
+<body class="bandwidth-high">
+  <!-- Mobile Menu Toggle -->
+  <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+    <i data-lucide="menu" class="mobile-menu-toggle__icon"></i>
+  </button>
+
+  <!-- Sidebar Overlay -->
+  <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+  <!-- Sidebar Navigation -->
+  <aside id="sidebar" class="sidebar" role="navigation" aria-label="Main navigation">
+    <div class="sidebar__header">
+      <a href="index.html" class="sidebar__logo">
+        <div class="sidebar__logo-icon">
+          <svg viewBox="0 0 100 100" width="40" height="40" aria-hidden="true">
+            <circle cx="50" cy="50" r="45" fill="#1E3A5F"/>
+            <circle cx="50" cy="50" r="35" fill="none" stroke="#7C3AED" stroke-width="3"/>
+            <circle cx="50" cy="50" r="15" fill="#7C3AED"/>
+          </svg>
+        </div>
+        <div class="sidebar__logo-text">
+          <span class="sidebar__logo-title">GeoForecast</span>
+          <span class="sidebar__logo-subtitle">Threat Intelligence</span>
+        </div>
+      </a>
+      <button id="sidebar-close" class="sidebar__close" aria-label="Close navigation menu">
+        <i data-lucide="x" class="sidebar__close-icon"></i>
+      </button>
+    </div>
+
+    <nav class="sidebar__nav">
+      <ul class="sidebar__menu" role="menubar">
+        <li class="sidebar__item" role="none">
+          <a href="index.html" class="sidebar__link" data-page="index" role="menuitem">
+            <span class="sidebar__link-icon"><i data-lucide="globe" aria-hidden="true"></i></span>
+            <span class="sidebar__link-text">Global Overview</span>
+          </a>
+        </li>
+        <li class="sidebar__item" role="none">
+          <a href="predictions.html" class="sidebar__link" data-page="predictions" role="menuitem">
+            <span class="sidebar__link-icon"><i data-lucide="brain" aria-hidden="true"></i></span>
+            <span class="sidebar__link-text">Predictions</span>
+          </a>
+        </li>
+        <li class="sidebar__item" role="none">
+          <a href="timeline.html" class="sidebar__link is-active" data-page="timeline" role="menuitem" aria-current="page">
+            <span class="sidebar__link-icon"><i data-lucide="calendar" aria-hidden="true"></i></span>
+            <span class="sidebar__link-text">Timeline</span>
+          </a>
+        </li>
+        <li class="sidebar__item" role="none">
+          <a href="alerts.html" class="sidebar__link" data-page="alerts" role="menuitem">
+            <span class="sidebar__link-icon"><i data-lucide="bell" aria-hidden="true"></i></span>
+            <span class="sidebar__link-text">Alert Center</span>
+            <span id="alert-badge" class="sidebar__badge" aria-label="Unread alerts">12</span>
+          </a>
+        </li>
+        <li class="sidebar__item" role="none">
+          <a href="settings.html" class="sidebar__link" data-page="settings" role="menuitem">
+            <span class="sidebar__link-icon"><i data-lucide="settings" aria-hidden="true"></i></span>
+            <span class="sidebar__link-text">Settings</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <div class="sidebar__footer">
+      <div class="sidebar__bandwidth" id="bandwidth-indicator">
+        <span class="sidebar__bandwidth-label">Mode:</span>
+        <span class="sidebar__bandwidth-value" id="bandwidth-value">High</span>
+      </div>
+      <div class="sidebar__user">
+        <div class="sidebar__user-avatar">
+          <i data-lucide="user" aria-hidden="true"></i>
+        </div>
+        <div class="sidebar__user-info">
+          <span class="sidebar__user-name">Guest User</span>
+          <span class="sidebar__user-role">Analyst</span>
+        </div>
+      </div>
+      <div class="sidebar__version">
+        <span>v1.0.0</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content timeline-page">
+    <!-- Timeline Header -->
+    <header class="timeline-header">
+      <div class="timeline-header__content">
+        <div class="timeline-header__title">
+          <i data-lucide="calendar" style="width: 28px; height: 28px; color: var(--color-primary);"></i>
+          <div>
+            <h1>Global Events Timeline</h1>
+            <span class="timeline-header__subtitle">Historical events and AI-powered predictions</span>
+          </div>
+        </div>
+        <div class="view-selector">
+          <button class="view-selector__btn is-active" data-view="timeline">
+            <i data-lucide="git-commit" style="width: 16px; height: 16px;"></i>
+            Timeline
+          </button>
+          <button class="view-selector__btn" data-view="calendar">
+            <i data-lucide="calendar-days" style="width: 16px; height: 16px;"></i>
+            Calendar
+          </button>
+          <button class="view-selector__btn" data-view="list">
+            <i data-lucide="list" style="width: 16px; height: 16px;"></i>
+            List
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Navigation Controls -->
+    <div class="timeline-controls">
+      <div class="timeline-controls__group">
+        <span class="timeline-controls__label">Zoom</span>
+        <div class="zoom-controls">
+          <button class="zoom-btn" data-zoom="day">Day</button>
+          <button class="zoom-btn" data-zoom="week">Week</button>
+          <button class="zoom-btn is-active" data-zoom="month">Month</button>
+          <button class="zoom-btn" data-zoom="year">Year</button>
+          <button class="zoom-btn" data-zoom="decade">Decade</button>
+        </div>
+      </div>
+
+      <div class="timeline-controls__group">
+        <button class="nav-btn" id="prev-btn" aria-label="Previous period">
+          <i data-lucide="chevron-left"></i>
+        </button>
+        <button class="today-btn" id="today-btn">
+          <i data-lucide="target" style="width: 16px; height: 16px;"></i>
+          Today
+        </button>
+        <button class="nav-btn" id="next-btn" aria-label="Next period">
+          <i data-lucide="chevron-right"></i>
+        </button>
+      </div>
+
+      <div class="timeline-controls__group">
+        <div class="date-range">
+          <input type="date" class="date-input" id="date-start" value="2024-01-01">
+          <span style="color: var(--color-text-muted);">to</span>
+          <input type="date" class="date-input" id="date-end" value="2025-12-31">
+        </div>
+        <button class="play-btn" id="play-btn" aria-label="Auto-scroll timeline">
+          <i data-lucide="play" id="play-icon" style="width: 18px; height: 18px;"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Quick Filters -->
+    <div class="timeline-controls" style="border-bottom: none; background: var(--color-bg-alt);">
+      <div class="timeline-controls__group">
+        <span class="timeline-controls__label">Show</span>
+        <div class="quick-filters">
+          <button class="quick-filter-btn is-active" data-filter="all">All Events</button>
+          <button class="quick-filter-btn" data-filter="historical">Historical Only</button>
+          <button class="quick-filter-btn" data-filter="predicted">Predicted Only</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Category Filters -->
+    <div class="category-filters">
+      <div class="category-filters__header">
+        <span class="category-filters__title">Filter by Category</span>
+        <div class="category-filters__actions">
+          <button class="category-filters__action" id="select-all-categories">Select All</button>
+          <button class="category-filters__action" id="select-none-categories">None</button>
+        </div>
+      </div>
+      <div class="category-filters__grid">
+        <div class="category-filter category-filter--political is-active" data-category="political">
+          <div class="category-filter__checkbox">
+            <i data-lucide="check" style="width: 12px; height: 12px;"></i>
+          </div>
+          <i data-lucide="landmark" class="category-filter__icon"></i>
+          <span class="category-filter__label">Political</span>
+          <span class="category-filter__count">24</span>
+        </div>
+        <div class="category-filter category-filter--economic is-active" data-category="economic">
+          <div class="category-filter__checkbox">
+            <i data-lucide="check" style="width: 12px; height: 12px;"></i>
+          </div>
+          <i data-lucide="trending-up" class="category-filter__icon"></i>
+          <span class="category-filter__label">Economic</span>
+          <span class="category-filter__count">18</span>
+        </div>
+        <div class="category-filter category-filter--health is-active" data-category="health">
+          <div class="category-filter__checkbox">
+            <i data-lucide="check" style="width: 12px; height: 12px;"></i>
+          </div>
+          <i data-lucide="heart-pulse" class="category-filter__icon"></i>
+          <span class="category-filter__label">Health</span>
+          <span class="category-filter__count">15</span>
+        </div>
+        <div class="category-filter category-filter--security is-active" data-category="security">
+          <div class="category-filter__checkbox">
+            <i data-lucide="check" style="width: 12px; height: 12px;"></i>
+          </div>
+          <i data-lucide="shield-alert" class="category-filter__icon"></i>
+          <span class="category-filter__label">Security</span>
+          <span class="category-filter__count">21</span>
+        </div>
+        <div class="category-filter category-filter--environmental is-active" data-category="environmental">
+          <div class="category-filter__checkbox">
+            <i data-lucide="check" style="width: 12px; height: 12px;"></i>
+          </div>
+          <i data-lucide="leaf" class="category-filter__icon"></i>
+          <span class="category-filter__label">Environmental</span>
+          <span class="category-filter__count">12</span>
+        </div>
+        <div class="category-filter category-filter--social is-active" data-category="social">
+          <div class="category-filter__checkbox">
+            <i data-lucide="check" style="width: 12px; height: 12px;"></i>
+          </div>
+          <i data-lucide="users" class="category-filter__icon"></i>
+          <span class="category-filter__label">Social</span>
+          <span class="category-filter__count">9</span>
+        </div>
+        <div class="category-filter category-filter--technological is-active" data-category="technological">
+          <div class="category-filter__checkbox">
+            <i data-lucide="check" style="width: 12px; height: 12px;"></i>
+          </div>
+          <i data-lucide="cpu" class="category-filter__icon"></i>
+          <span class="category-filter__label">Technological</span>
+          <span class="category-filter__count">7</span>
+        </div>
+        <div class="category-filter category-filter--astrological is-active" data-category="astrological">
+          <div class="category-filter__checkbox">
+            <i data-lucide="check" style="width: 12px; height: 12px;"></i>
+          </div>
+          <i data-lucide="sparkles" class="category-filter__icon"></i>
+          <span class="category-filter__label">Astrological</span>
+          <span class="category-filter__count">5</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Timeline Container -->
+    <div class="timeline-container">
+      <div class="timeline-line"></div>
+
+      <!-- Today Marker -->
+      <div class="today-marker" id="today-marker" style="top: 100px;">
+        <div class="today-marker__dot"></div>
+        <div class="today-marker__label">Today</div>
+      </div>
+
+      <!-- Timeline Events -->
+      <div class="timeline-events" id="timeline-events">
+        <!-- Events will be dynamically inserted here -->
+      </div>
+
+      <!-- Confidence Legend -->
+      <div class="confidence-legend">
+        <div class="confidence-legend__item">
+          <div class="confidence-legend__indicator confidence-legend__indicator--high"></div>
+          <span class="confidence-legend__label">High Confidence (80-100%)</span>
+        </div>
+        <div class="confidence-legend__item">
+          <div class="confidence-legend__indicator confidence-legend__indicator--medium"></div>
+          <span class="confidence-legend__label">Medium Confidence (50-79%)</span>
+        </div>
+        <div class="confidence-legend__item">
+          <div class="confidence-legend__indicator confidence-legend__indicator--low"></div>
+          <span class="confidence-legend__label">Low Confidence (<50%)</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Event Detail Modal -->
+  <div class="modal-backdrop" id="event-modal-backdrop"></div>
+  <div class="modal event-modal__content" id="event-modal">
+    <div class="modal__header">
+      <div class="event-modal__header" style="flex: 1; border: none; padding: 0;">
+        <div class="event-modal__icon" id="modal-icon">
+          <i data-lucide="landmark"></i>
+        </div>
+        <div class="event-modal__meta">
+          <span class="event-modal__category" id="modal-category">
+            <i data-lucide="landmark" style="width: 12px; height: 12px;"></i>
+            Political
+          </span>
+          <h2 class="event-modal__title" id="modal-title">Event Title</h2>
+          <div class="event-modal__date-location">
+            <span><i data-lucide="calendar" style="width: 14px; height: 14px;"></i> <span id="modal-date">Jan 15, 2024</span></span>
+            <span><i data-lucide="map-pin" style="width: 14px; height: 14px;"></i> <span id="modal-location">Global</span></span>
+          </div>
+        </div>
+      </div>
+      <button class="modal__close" id="modal-close" aria-label="Close modal">
+        <i data-lucide="x" style="width: 24px; height: 24px;"></i>
+      </button>
+    </div>
+    <div class="modal__body">
+      <div class="event-modal__section">
+        <h3 class="event-modal__section-title">Description</h3>
+        <p class="event-modal__description" id="modal-description">
+          Event description goes here...
+        </p>
+      </div>
+
+      <div class="event-modal__section" id="modal-prediction-section" style="display: none;">
+        <div class="prediction-details">
+          <div class="prediction-details__header">
+            <i data-lucide="brain"></i>
+            <span class="prediction-details__title">Prediction Details</span>
+          </div>
+          <div class="prediction-details__grid">
+            <div class="prediction-detail">
+              <span class="prediction-detail__label">Confidence Level</span>
+              <span class="prediction-detail__value" id="modal-confidence">85%</span>
+            </div>
+            <div class="prediction-detail">
+              <span class="prediction-detail__label">Methodology</span>
+              <span class="prediction-detail__value" id="modal-methodology">Game Theory</span>
+            </div>
+            <div class="prediction-detail">
+              <span class="prediction-detail__label">Time Window</span>
+              <span class="prediction-detail__value" id="modal-timewindow">± 7 days</span>
+            </div>
+            <div class="prediction-detail">
+              <span class="prediction-detail__label">Historical Accuracy</span>
+              <span class="prediction-detail__value" id="modal-accuracy">78%</span>
+            </div>
+          </div>
+          <div class="confidence-bar" style="margin-top: var(--space-4);">
+            <div class="confidence-bar__label">
+              <span class="confidence-bar__text">Prediction Confidence</span>
+              <span class="confidence-bar__value" id="modal-confidence-bar">85%</span>
+            </div>
+            <div class="confidence-bar__track">
+              <div class="confidence-bar__fill" id="modal-confidence-fill" style="width: 85%;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="event-modal__section">
+        <h3 class="event-modal__section-title">Related Alerts</h3>
+        <div class="related-alerts" id="modal-related-alerts">
+          <!-- Related alerts will be inserted here -->
+        </div>
+      </div>
+
+      <div class="event-modal__section">
+        <h3 class="event-modal__section-title">Sources</h3>
+        <div class="source-links" id="modal-sources">
+          <a href="#" class="source-link">
+            <i data-lucide="external-link"></i>
+            Official Report
+          </a>
+          <a href="#" class="source-link">
+            <i data-lucide="newspaper"></i>
+            News Coverage
+          </a>
+          <a href="#" class="source-link">
+            <i data-lucide="file-text"></i>
+            Analysis Document
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn-secondary" id="modal-share">
+        <i data-lucide="share-2" style="width: 18px; height: 18px;"></i>
+        Share
+      </button>
+      <button class="btn btn-primary" id="modal-action">
+        <i data-lucide="bell" style="width: 18px; height: 18px;"></i>
+        Set Alert
+      </button>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer" role="contentinfo">
+    <div class="footer__container">
+      <div class="footer__main">
+        <div class="footer__brand">
+          <a href="index.html" class="footer__logo">
+            <div class="footer__logo-icon">
+              <svg viewBox="0 0 100 100" width="48" height="48" aria-hidden="true">
+                <circle cx="50" cy="50" r="45" fill="#7C3AED"/>
+                <circle cx="50" cy="50" r="35" fill="none" stroke="#FFFFFF" stroke-width="3"/>
+                <circle cx="50" cy="50" r="15" fill="#FFFFFF"/>
+              </svg>
+            </div>
+            <div class="footer__logo-text">
+              <span class="footer__logo-title">GeoForecast</span>
+              <span class="footer__logo-tagline">Global Threat Intelligence</span>
+            </div>
+          </a>
+          <p class="footer__description">
+            Advanced geopolitical forecasting using game theory, astrological patterns, 
+            and data-driven analytics to provide actionable intelligence for decision makers.
+          </p>
+          <div class="footer__social">
+            <a href="#" class="footer__social-link" aria-label="Twitter">
+              <i data-lucide="twitter" aria-hidden="true"></i>
+            </a>
+            <a href="#" class="footer__social-link" aria-label="LinkedIn">
+              <i data-lucide="linkedin" aria-hidden="true"></i>
+            </a>
+            <a href="#" class="footer__social-link" aria-label="GitHub">
+              <i data-lucide="github" aria-hidden="true"></i>
+            </a>
+            <a href="#" class="footer__social-link" aria-label="RSS Feed">
+              <i data-lucide="rss" aria-hidden="true"></i>
+            </a>
+          </div>
+        </div>
+        <div class="footer__column">
+          <h3 class="footer__heading">Quick Links</h3>
+          <ul class="footer__links">
+            <li><a href="index.html" class="footer__link">Global Overview</a></li>
+            <li><a href="predictions.html" class="footer__link">Predictions Hub</a></li>
+            <li><a href="timeline.html" class="footer__link">Events Timeline</a></li>
+            <li><a href="alerts.html" class="footer__link">Alert Center</a></li>
+            <li><a href="settings.html" class="footer__link">Settings</a></li>
+          </ul>
+        </div>
+        <div class="footer__column">
+          <h3 class="footer__heading">Resources</h3>
+          <ul class="footer__links">
+            <li><a href="#documentation" class="footer__link">Documentation</a></li>
+            <li><a href="#api" class="footer__link">API Reference</a></li>
+            <li><a href="#methodology" class="footer__link">Methodology</a></li>
+            <li><a href="#data-sources" class="footer__link">Data Sources</a></li>
+            <li><a href="#faq" class="footer__link">FAQ</a></li>
+          </ul>
+        </div>
+        <div class="footer__column">
+          <h3 class="footer__heading">Contact</h3>
+          <ul class="footer__links">
+            <li><a href="#about" class="footer__link">About Us</a></li>
+            <li><a href="#contact" class="footer__link">Contact Support</a></li>
+            <li><a href="#feedback" class="footer__link">Send Feedback</a></li>
+            <li><a href="#report" class="footer__link">Report an Issue</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer__attribution">
+        <div class="footer__attribution-content">
+          <i data-lucide="database" class="footer__attribution-icon" aria-hidden="true"></i>
+          <span class="footer__attribution-text">
+            Data sources: WHO, World Bank, UN, NOAA, USGS, ECDC, and other public health 
+            and safety organizations. Predictions are algorithmic estimates and should not 
+            be considered as definitive forecasts.
+          </span>
+        </div>
+      </div>
+      <div class="footer__bottom">
+        <div class="footer__legal">
+          <span class="footer__copyright">
+            &copy; <span id="footer-year">2024</span> GeoForecast. All rights reserved.
+          </span>
+          <nav class="footer__legal-nav" aria-label="Legal links">
+            <a href="#privacy" class="footer__legal-link">Privacy Policy</a>
+            <a href="#terms" class="footer__legal-link">Terms of Service</a>
+            <a href="#cookies" class="footer__legal-link">Cookie Policy</a>
+            <a href="#accessibility" class="footer__legal-link">Accessibility</a>
+          </nav>
+        </div>
+        <div class="footer__version">
+          <span class="footer__version-label">Version</span>
+          <span class="footer__version-number">1.0.0</span>
+          <span class="footer__version-separator">|</span>
+          <span class="footer__build">Build 2024.01.15</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // ============================================
+    // Timeline Page JavaScript
+    // ============================================
+
+    // Initialize Lucide icons
+    document.addEventListener('DOMContentLoaded', function() {
+      lucide.createIcons();
+      initializeTimeline();
+      initializeSidebar();
+      initializeModal();
+      initializeFilters();
+      initializeControls();
+      initializeScrollAnimations();
+    });
+
+    // Sample timeline events data
+    const timelineEvents = [
+      {
+        id: 1,
+        title: "Global Climate Summit Agreement",
+        description: "World leaders reached a historic agreement on carbon emission reductions, targeting net-zero by 2050. The pact includes binding commitments from 140 countries and establishes a $100 billion annual climate fund.",
+        date: "2024-01-15",
+        category: "environmental",
+        location: "Dubai, UAE",
+        severity: "medium",
+        type: "historical",
+        icon: "leaf",
+        relatedAlerts: [
+          { title: "New emission standards announced", severity: "medium", time: "2 hours ago" },
+          { title: "Energy sector impact assessment", severity: "low", time: "5 hours ago" }
+        ]
+      },
+      {
+        id: 2,
+        title: "Major Cyberattack on Financial Systems",
+        description: "A coordinated cyberattack targeted multiple major financial institutions, affecting payment processing systems across three continents. Security experts trace the attack to a sophisticated state-sponsored group.",
+        date: "2024-02-03",
+        category: "security",
+        location: "Multiple Regions",
+        severity: "critical",
+        type: "historical",
+        icon: "shield-alert",
+        relatedAlerts: [
+          { title: "Banking systems offline", severity: "critical", time: "30 minutes ago" },
+          { title: "Payment processing delays", severity: "high", time: "1 hour ago" }
+        ]
+      },
+      {
+        id: 3,
+        title: "New Trade Alliance Formation",
+        description: "Pacific Rim nations announced the formation of the Pacific Economic Partnership (PEP), creating the world's largest free trade zone. The agreement is expected to boost regional GDP by 3.5% over the next decade.",
+        date: "2024-02-20",
+        category: "economic",
+        location: "Singapore",
+        severity: "medium",
+        type: "historical",
+        icon: "trending-up",
+        relatedAlerts: [
+          { title: "Stock markets rally on news", severity: "low", time: "3 hours ago" }
+        ]
+      },
+      {
+        id: 4,
+        title: "Pandemic Response Protocol Update",
+        description: "WHO issued updated pandemic response protocols following lessons learned from recent outbreaks. New guidelines emphasize early detection, rapid response, and improved international coordination.",
+        date: "2024-03-08",
+        category: "health",
+        location: "Geneva, Switzerland",
+        severity: "high",
+        type: "historical",
+        icon: "heart-pulse",
+        relatedAlerts: [
+          { title: "New variant detected in Region 3", severity: "high", time: "1 hour ago" },
+          { title: "Travel restrictions updated", severity: "medium", time: "4 hours ago" }
+        ]
+      },
+      {
+        id: 5,
+        title: "Regional Elections Spark Political Shift",
+        description: "Elections across Eastern Europe resulted in significant political realignment, with pro-EU parties gaining majority in 5 out of 7 contested nations. Analysts predict major policy shifts in regional cooperation.",
+        date: "2024-03-25",
+        category: "political",
+        location: "Eastern Europe",
+        severity: "medium",
+        type: "historical",
+        icon: "landmark",
+        relatedAlerts: [
+          { title: "Policy changes expected", severity: "medium", time: "6 hours ago" }
+        ]
+      },
+      {
+        id: 6,
+        title: "AI Regulation Framework Adoption",
+        description: "The International AI Governance Treaty was signed by 78 countries, establishing the first global framework for AI development and deployment. The treaty includes safety standards, transparency requirements, and enforcement mechanisms.",
+        date: "2024-04-12",
+        category: "technological",
+        location: "Brussels, Belgium",
+        severity: "high",
+        type: "historical",
+        icon: "cpu",
+        relatedAlerts: [
+          { title: "Tech industry compliance deadline set", severity: "medium", time: "2 hours ago" }
+        ]
+      },
+      {
+        id: 7,
+        title: "Saturn-Pluto Conjunction Economic Impact",
+        description: "Astrological analysis indicates significant economic restructuring during this rare conjunction. Historical patterns suggest major shifts in financial systems and power structures over the next 18 months.",
+        date: "2024-05-01",
+        category: "astrological",
+        location: "Global",
+        severity: "medium",
+        type: "predicted",
+        confidence: 72,
+        methodology: "Astrological Pattern Analysis",
+        timewindow: "± 14 days",
+        accuracy: 68,
+        icon: "sparkles",
+        relatedAlerts: [
+          { title: "Market volatility expected", severity: "medium", time: "Prediction" }
+        ]
+      },
+      {
+        id: 8,
+        title: "Social Unrest in Major Metropolitan Areas",
+        description: "Economic pressures and political dissatisfaction are expected to trigger widespread protests in major cities. Game theory simulations indicate high probability of sustained civil unrest requiring coordinated response.",
+        date: "2024-05-20",
+        category: "social",
+        location: "Multiple Cities",
+        severity: "high",
+        type: "predicted",
+        confidence: 81,
+        methodology: "Game Theory Simulation",
+        timewindow: "± 10 days",
+        accuracy: 75,
+        icon: "users",
+        relatedAlerts: [
+          { title: "Travel advisory issued", severity: "high", time: "Prediction" },
+          { title: "Emergency protocols activated", severity: "medium", time: "Prediction" }
+        ]
+      },
+      {
+        id: 9,
+        title: "Major Earthquake Predicted - Pacific Ring",
+        description: "Geological and astrological indicators suggest elevated probability of significant seismic activity along the Pacific Ring of Fire. Pattern analysis shows correlation with historical major events.",
+        date: "2024-06-15",
+        category: "environmental",
+        location: "Pacific Region",
+        severity: "critical",
+        type: "predicted",
+        confidence: 65,
+        methodology: "Pattern Recognition + Geological Data",
+        timewindow: "± 21 days",
+        accuracy: 62,
+        icon: "activity",
+        relatedAlerts: [
+          { title: "Tsunami warning systems on standby", severity: "high", time: "Prediction" }
+        ]
+      },
+      {
+        id: 10,
+        title: "Central Bank Digital Currency Launch",
+        description: "The Federal Reserve announced the official launch date for the Digital Dollar, marking a historic shift in monetary policy. The CBDC will operate alongside traditional currency with phased rollout beginning Q3.",
+        date: "2024-06-01",
+        category: "economic",
+        location: "United States",
+        severity: "high",
+        type: "historical",
+        icon: "dollar-sign",
+        relatedAlerts: [
+          { title: "Cryptocurrency markets react", severity: "medium", time: "1 hour ago" },
+          { title: "Banking sector update required", severity: "high", time: "3 hours ago" }
+        ]
+      },
+      {
+        id: 11,
+        title: "Nash Equilibrium Shift in Regional Conflict",
+        description: "Game theory analysis indicates a strategic pivot point approaching in ongoing regional tensions. Multiple actor simulations suggest potential for negotiated settlement or escalation within 60 days.",
+        date: "2024-07-10",
+        category: "security",
+        location: "Middle East",
+        severity: "critical",
+        type: "predicted",
+        confidence: 78,
+        methodology: "Game Theory - Multi-Actor Simulation",
+        timewindow: "± 30 days",
+        accuracy: 71,
+        icon: "shield",
+        relatedAlerts: [
+          { title: "Diplomatic channels opening", severity: "medium", time: "Prediction" },
+          { title: "Military readiness elevated", severity: "high", time: "Prediction" }
+        ]
+      },
+      {
+        id: 12,
+        title: "Global Health Initiative Funding Surge",
+        description: "Major donors pledged unprecedented funding for global health infrastructure, targeting pandemic preparedness and universal healthcare access. The $50 billion commitment represents a 300% increase from previous levels.",
+        date: "2024-07-25",
+        category: "health",
+        location: "Global",
+        severity: "medium",
+        type: "historical",
+        icon: "heart-pulse",
+        relatedAlerts: [
+          { title: "Vaccine distribution expansion", severity: "low", time: "5 hours ago" }
+        ]
+      },
+      {
+        id: 13,
+        title: "Jupiter-Uranus Alignment - Innovation Wave",
+        description: "The rare Jupiter-Uranus conjunction historically correlates with breakthrough innovations and technological disruptions. Expect significant announcements in AI, biotech, and clean energy sectors.",
+        date: "2024-08-20",
+        category: "astrological",
+        location: "Global",
+        severity: "medium",
+        type: "predicted",
+        confidence: 88,
+        methodology: "Astrological-Historical Correlation",
+        timewindow: "± 7 days",
+        accuracy: 82,
+        icon: "sparkles",
+        relatedAlerts: [
+          { title: "Tech IPO window opening", severity: "medium", time: "Prediction" }
+        ]
+      },
+      {
+        id: 14,
+        title: "Energy Crisis Response Summit",
+        description: "Emergency summit convened to address spiraling energy costs and supply chain disruptions. Nations agreed to strategic petroleum reserve releases and accelerated renewable energy investments.",
+        date: "2024-08-05",
+        category: "economic",
+        location: "London, UK",
+        severity: "high",
+        type: "historical",
+        icon: "zap",
+        relatedAlerts: [
+          { title: "Oil prices stabilize", severity: "medium", time: "2 hours ago" },
+          { title: "Renewable stocks surge", severity: "low", time: "4 hours ago" }
+        ]
+      },
+      {
+        id: 15,
+        title: "Democratic Backsliding Warning",
+        description: "Democracy indices show concerning trends in multiple regions. Pattern analysis suggests potential for significant democratic erosion in 3-5 countries over the next 12 months without intervention.",
+        date: "2024-09-15",
+        category: "political",
+        location: "Multiple Regions",
+        severity: "high",
+        type: "predicted",
+        confidence: 74,
+        methodology: "Pattern Recognition + Political Analysis",
+        timewindow: "± 90 days",
+        accuracy: 69,
+        icon: "landmark",
+        relatedAlerts: [
+          { title: "Election monitoring enhanced", severity: "medium", time: "Prediction" }
+        ]
+      }
+    ];
+
+    // State management
+    let activeCategories = new Set(['political', 'economic', 'health', 'security', 'environmental', 'social', 'technological', 'astrological']);
+    let activeFilter = 'all';
+    let isPlaying = false;
+    let playInterval = null;
+    let currentZoom = 'month';
+
+    // Initialize timeline
+    function initializeTimeline() {
+      renderEvents();
+      updateTodayMarker();
+    }
+
+    // Render timeline events
+    function renderEvents() {
+      const container = document.getElementById('timeline-events');
+      container.innerHTML = '';
+
+      const filteredEvents = timelineEvents.filter(event => {
+        const categoryMatch = activeCategories.has(event.category);
+        const typeMatch = activeFilter === 'all' || event.type === activeFilter;
+        return categoryMatch && typeMatch;
+      });
+
+      if (filteredEvents.length === 0) {
+        container.innerHTML = `
+          <div class="timeline-empty">
+            <div class="timeline-empty__icon">
+              <i data-lucide="calendar-x" style="width: 32px; height: 32px;"></i>
+            </div>
+            <h3 class="timeline-empty__title">No events found</h3>
+            <p class="timeline-empty__description">Try adjusting your filters to see more events.</p>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      // Sort events by date
+      filteredEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      filteredEvents.forEach((event, index) => {
+        const isLeft = index % 2 === 0;
+        const isPredicted = event.type === 'predicted';
+        const sideClass = isLeft ? 'timeline-event--left' : 'timeline-event--right';
+        const predictedClass = isPredicted ? 'timeline-event--predicted' : '';
+        const severityClass = `severity--${event.severity}`;
+
+        const eventHTML = `
+          <div class="timeline-event ${sideClass} ${predictedClass} timeline-event--${event.category} ${severityClass}" 
+               data-id="${event.id}" 
+               data-category="${event.category}"
+               data-type="${event.type}">
+            <div class="timeline-event__node"></div>
+            <div class="timeline-event__connector"></div>
+            <div class="event-card" onclick="openEventModal(${event.id})">
+              <div class="event-card__header">
+                <div class="event-card__icon">
+                  <i data-lucide="${event.icon}"></i>
+                </div>
+                <div class="event-card__meta">
+                  <div class="event-card__date">
+                    <i data-lucide="calendar"></i>
+                    ${formatDate(event.date)}
+                    ${isPredicted ? '<span style="color: var(--color-secondary);">(Predicted)</span>' : ''}
+                  </div>
+                  <h3 class="event-card__title">${event.title}</h3>
+                </div>
+              </div>
+              <div class="event-card__body">
+                <p class="event-card__description">${event.description.substring(0, 150)}...</p>
+              </div>
+              <div class="event-card__footer">
+                <div class="event-card__location">
+                  <i data-lucide="map-pin"></i>
+                  ${event.location}
+                </div>
+                <div class="event-card__badges">
+                  <span class="event-card__badge event-card__badge--severity">
+                    <i data-lucide="alert-circle" style="width: 12px; height: 12px;"></i>
+                    ${event.severity.charAt(0).toUpperCase() + event.severity.slice(1)}
+                  </span>
+                  ${isPredicted ? `
+                    <span class="event-card__badge event-card__badge--confidence">
+                      <i data-lucide="brain" style="width: 12px; height: 12px;"></i>
+                      ${event.confidence}%
+                    </span>
+                  ` : ''}
+                </div>
+              </div>
+              ${isPredicted ? `
+                <div class="confidence-bar">
+                  <div class="confidence-bar__label">
+                    <span class="confidence-bar__text">Prediction Confidence</span>
+                    <span class="confidence-bar__value">${event.confidence}%</span>
+                  </div>
+                  <div class="confidence-bar__track">
+                    <div class="confidence-bar__fill" style="width: ${event.confidence}%"></div>
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        `;
+
+        container.insertAdjacentHTML('beforeend', eventHTML);
+      });
+
+      lucide.createIcons();
+    }
+
+    // Format date
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      const options = { year: 'numeric', month: 'short', day: 'numeric' };
+      return date.toLocaleDateString('en-US', options);
+    }
+
+    // Update today marker position
+    function updateTodayMarker() {
+      const today = new Date();
+      const events = document.querySelectorAll('.timeline-event');
+      let closestEvent = null;
+      let minDiff = Infinity;
+
+      events.forEach(event => {
+        const eventId = parseInt(event.dataset.id);
+        const eventData = timelineEvents.find(e => e.id === eventId);
+        if (eventData) {
+          const eventDate = new Date(eventData.date);
+          const diff = Math.abs(today - eventDate);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestEvent = event;
+          }
+        }
+      });
+
+      if (closestEvent) {
+        const marker = document.getElementById('today-marker');
+        const eventRect = closestEvent.getBoundingClientRect();
+        const containerRect = document.querySelector('.timeline-container').getBoundingClientRect();
+        marker.style.top = `${eventRect.top - containerRect.top + 24}px`;
+      }
+    }
+
+    // Initialize sidebar
+    function initializeSidebar() {
+      const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+      const sidebarClose = document.getElementById('sidebar-close');
+      const sidebar = document.getElementById('sidebar');
+      const sidebarOverlay = document.getElementById('sidebar-overlay');
+
+      function openSidebar() {
+        sidebar.classList.add('is-open');
+        sidebarOverlay.classList.add('is-open');
+        mobileMenuToggle.setAttribute('aria-expanded', 'true');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeSidebar() {
+        sidebar.classList.remove('is-open');
+        sidebarOverlay.classList.remove('is-open');
+        mobileMenuToggle.setAttribute('aria-expanded', 'false');
+        document.body.style.overflow = '';
+      }
+
+      if (mobileMenuToggle) {
+        mobileMenuToggle.addEventListener('click', () => {
+          sidebar.classList.contains('is-open') ? closeSidebar() : openSidebar();
+        });
+      }
+
+      if (sidebarClose) {
+        sidebarClose.addEventListener('click', closeSidebar);
+      }
+
+      if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', closeSidebar);
+      }
+
+      // Close on escape
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && sidebar.classList.contains('is-open')) {
+          closeSidebar();
+        }
+      });
+
+      // Close when clicking nav links on mobile
+      const navLinks = document.querySelectorAll('.sidebar__link');
+      navLinks.forEach(link => {
+        link.addEventListener('click', () => {
+          if (window.innerWidth < 1024) {
+            closeSidebar();
+          }
+        });
+      });
+    }
+
+    // Initialize modal
+    function initializeModal() {
+      const backdrop = document.getElementById('event-modal-backdrop');
+      const modal = document.getElementById('event-modal');
+      const closeBtn = document.getElementById('modal-close');
+
+      function closeModal() {
+        backdrop.classList.remove('is-open');
+        modal.classList.remove('is-open');
+        document.body.style.overflow = '';
+      }
+
+      closeBtn.addEventListener('click', closeModal);
+      backdrop.addEventListener('click', closeModal);
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.classList.contains('is-open')) {
+          closeModal();
+        }
+      });
+
+      // Share and action buttons
+      document.getElementById('modal-share').addEventListener('click', () => {
+        showToast('Event link copied to clipboard', 'success');
+      });
+
+      document.getElementById('modal-action').addEventListener('click', () => {
+        showToast('Alert set for this event', 'info');
+      });
+    }
+
+    // Open event modal
+    function openEventModal(eventId) {
+      const event = timelineEvents.find(e => e.id === eventId);
+      if (!event) return;
+
+      const backdrop = document.getElementById('event-modal-backdrop');
+      const modal = document.getElementById('event-modal');
+
+      // Update modal content
+      document.getElementById('modal-title').textContent = event.title;
+      document.getElementById('modal-description').textContent = event.description;
+      document.getElementById('modal-date').textContent = formatDate(event.date);
+      document.getElementById('modal-location').textContent = event.location;
+
+      // Update category
+      const categoryEl = document.getElementById('modal-category');
+      categoryEl.innerHTML = `
+        <i data-lucide="${event.icon}" style="width: 12px; height: 12px;"></i>
+        ${event.category.charAt(0).toUpperCase() + event.category.slice(1)}
+      `;
+
+      // Update icon
+      const iconEl = document.getElementById('modal-icon');
+      iconEl.innerHTML = `<i data-lucide="${event.icon}"></i>`;
+
+      // Update prediction details
+      const predictionSection = document.getElementById('modal-prediction-section');
+      if (event.type === 'predicted') {
+        predictionSection.style.display = 'block';
+        document.getElementById('modal-confidence').textContent = event.confidence + '%';
+        document.getElementById('modal-methodology').textContent = event.methodology;
+        document.getElementById('modal-timewindow').textContent = event.timewindow;
+        document.getElementById('modal-accuracy').textContent = event.accuracy + '%';
+        document.getElementById('modal-confidence-bar').textContent = event.confidence + '%';
+        document.getElementById('modal-confidence-fill').style.width = event.confidence + '%';
+      } else {
+        predictionSection.style.display = 'none';
+      }
+
+      // Update related alerts
+      const relatedAlertsEl = document.getElementById('modal-related-alerts');
+      relatedAlertsEl.innerHTML = '';
+      if (event.relatedAlerts) {
+        event.relatedAlerts.forEach(alert => {
+          const alertHTML = `
+            <div class="related-alert severity--${alert.severity}">
+              <div class="related-alert__icon">
+                <i data-lucide="bell"></i>
+              </div>
+              <div class="related-alert__content">
+                <div class="related-alert__title">${alert.title}</div>
+                <div class="related-alert__meta">${alert.time}</div>
+              </div>
+            </div>
+          `;
+          relatedAlertsEl.insertAdjacentHTML('beforeend', alertHTML);
+        });
+      }
+
+      // Set CSS variables for colors
+      const categoryColors = {
+        political: '#1E3A5F',
+        economic: '#E85D4E',
+        health: '#14B8A6',
+        security: '#DC2626',
+        environmental: '#22C55E',
+        social: '#7C3AED',
+        technological: '#3B82F6',
+        astrological: '#B8860B'
+      };
+
+      modal.style.setProperty('--event-color', categoryColors[event.category]);
+      modal.style.setProperty('--event-color-rgb', hexToRgb(categoryColors[event.category]));
+
+      lucide.createIcons();
+
+      // Show modal
+      backdrop.classList.add('is-open');
+      modal.classList.add('is-open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    // Hex to RGB helper
+    function hexToRgb(hex) {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '0, 0, 0';
+    }
+
+    // Initialize filters
+    function initializeFilters() {
+      // Category filters
+      const categoryFilters = document.querySelectorAll('.category-filter');
+      categoryFilters.forEach(filter => {
+        filter.addEventListener('click', () => {
+          const category = filter.dataset.category;
+          filter.classList.toggle('is-active');
+
+          if (filter.classList.contains('is-active')) {
+            activeCategories.add(category);
+          } else {
+            activeCategories.delete(category);
+          }
+
+          renderEvents();
+          initializeScrollAnimations();
+        });
+      });
+
+      // Select all/none
+      document.getElementById('select-all-categories').addEventListener('click', () => {
+        categoryFilters.forEach(filter => {
+          filter.classList.add('is-active');
+          activeCategories.add(filter.dataset.category);
+        });
+        renderEvents();
+        initializeScrollAnimations();
+      });
+
+      document.getElementById('select-none-categories').addEventListener('click', () => {
+        categoryFilters.forEach(filter => {
+          filter.classList.remove('is-active');
+          activeCategories.delete(filter.dataset.category);
+        });
+        renderEvents();
+        initializeScrollAnimations();
+      });
+
+      // Quick filters
+      const quickFilters = document.querySelectorAll('.quick-filter-btn');
+      quickFilters.forEach(btn => {
+        btn.addEventListener('click', () => {
+          quickFilters.forEach(b => b.classList.remove('is-active'));
+          btn.classList.add('is-active');
+          activeFilter = btn.dataset.filter;
+          renderEvents();
+          initializeScrollAnimations();
+        });
+      });
+    }
+
+    // Initialize controls
+    function initializeControls() {
+      // Zoom controls
+      const zoomBtns = document.querySelectorAll('.zoom-btn');
+      zoomBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          zoomBtns.forEach(b => b.classList.remove('is-active'));
+          btn.classList.add('is-active');
+          currentZoom = btn.dataset.zoom;
+          showToast(`Zoom level: ${currentZoom}`, 'info');
+        });
+      });
+
+      // View selector
+      const viewBtns = document.querySelectorAll('.view-selector__btn');
+      viewBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          viewBtns.forEach(b => b.classList.remove('is-active'));
+          btn.classList.add('is-active');
+          const view = btn.dataset.view;
+          if (view !== 'timeline') {
+            showToast(`${view.charAt(0).toUpperCase() + view.slice(1)} view coming soon`, 'info');
+          }
+        });
+      });
+
+      // Today button
+      document.getElementById('today-btn').addEventListener('click', () => {
+        const todayMarker = document.getElementById('today-marker');
+        todayMarker.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        showToast('Jumped to today', 'success');
+      });
+
+      // Play/Pause button
+      const playBtn = document.getElementById('play-btn');
+      playBtn.addEventListener('click', () => {
+        isPlaying = !isPlaying;
+        playBtn.classList.toggle('is-playing', isPlaying);
+
+        const playIcon = document.getElementById('play-icon');
+        if (isPlaying) {
+          playIcon.setAttribute('data-lucide', 'pause');
+          lucide.createIcons();
+          startAutoScroll();
+        } else {
+          playIcon.setAttribute('data-lucide', 'play');
+          lucide.createIcons();
+          stopAutoScroll();
+        }
+      });
+
+      // Navigation buttons
+      document.getElementById('prev-btn').addEventListener('click', () => {
+        showToast('Previous period', 'info');
+      });
+
+      document.getElementById('next-btn').addEventListener('click', () => {
+        showToast('Next period', 'info');
+      });
+    }
+
+    // Auto scroll functionality
+    function startAutoScroll() {
+      playInterval = setInterval(() => {
+        window.scrollBy({ top: 2, behavior: 'auto' });
+      }, 50);
+    }
+
+    function stopAutoScroll() {
+      if (playInterval) {
+        clearInterval(playInterval);
+        playInterval = null;
+      }
+    }
+
+    // Initialize scroll animations
+    function initializeScrollAnimations() {
+      const events = document.querySelectorAll('.timeline-event');
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+          }
+        });
+      }, {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+      });
+
+      events.forEach(event => {
+        observer.observe(event);
+      });
+    }
+
+    // Toast notification
+    function showToast(message, type = 'info') {
+      const toast = document.createElement('div');
+      toast.className = `toast toast--${type}`;
+      toast.innerHTML = `
+        <i data-lucide="${type === 'success' ? 'check-circle' : type === 'error' ? 'x-circle' : 'info'}" class="toast__icon"></i>
+        <div class="toast__content">
+          <div class="toast__message">${message}</div>
+        </div>
+      `;
+
+      // Add toast styles if not already present
+      if (!document.getElementById('toast-styles')) {
+        const styles = document.createElement('style');
+        styles.id = 'toast-styles';
+        styles.textContent = `
+          .toast-container {
+            position: fixed;
+            top: calc(var(--header-height) + var(--space-4));
+            right: var(--space-4);
+            z-index: 700;
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-3);
+            max-width: 400px;
+          }
+          .toast {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            padding: var(--space-4);
+            background: var(--color-card-bg);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-xl);
+            animation: slideInRight 0.3s ease-out;
+          }
+          .toast__icon { width: 24px; height: 24px; flex-shrink: 0; }
+          .toast--success .toast__icon { color: var(--color-success); }
+          .toast--error .toast__icon { color: var(--color-error); }
+          .toast--info .toast__icon { color: var(--color-info); }
+          .toast__content { flex: 1; }
+          .toast__message { font-size: var(--text-body-sm); color: var(--color-text-primary); }
+          @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+          }
+        `;
+        document.head.appendChild(styles);
+      }
+
+      let container = document.querySelector('.toast-container');
+      if (!container) {
+        container = document.createElement('div');
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+      }
+
+      container.appendChild(toast);
+      lucide.createIcons();
+
+      setTimeout(() => {
+        toast.style.animation = 'slideInRight 0.3s ease-out reverse';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // Update copyright year
+    document.getElementById('footer-year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>

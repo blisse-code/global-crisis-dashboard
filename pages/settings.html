@@ -1,0 +1,1878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings | Geopolitical Forecast Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="../shared/styles.css">
+  <style>
+    /* Settings Page Specific Styles */
+    .settings-container {
+      display: flex;
+      gap: var(--space-8);
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .settings-sidebar {
+      width: 240px;
+      flex-shrink: 0;
+      position: sticky;
+      top: calc(var(--header-height) + var(--space-6));
+      height: fit-content;
+    }
+
+    .settings-nav {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+
+    .settings-nav__item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--radius-lg);
+      color: var(--color-text-secondary);
+      transition: var(--transition-fast);
+      cursor: pointer;
+    }
+
+    .settings-nav__item:hover {
+      background: var(--color-bg-alt);
+      color: var(--color-text-primary);
+    }
+
+    .settings-nav__item.is-active {
+      background: rgba(var(--color-primary-rgb), 0.1);
+      color: var(--color-primary);
+    }
+
+    .settings-nav__icon {
+      width: 20px;
+      height: 20px;
+    }
+
+    .settings-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .settings-section {
+      margin-bottom: var(--space-8);
+    }
+
+    .settings-section__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-6);
+      padding-bottom: var(--space-4);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .settings-section__title {
+      font-size: var(--text-h4);
+      font-weight: var(--font-semibold);
+      color: var(--color-text-primary);
+    }
+
+    .settings-section__description {
+      font-size: var(--text-body-sm);
+      color: var(--color-text-muted);
+      margin-top: var(--space-1);
+    }
+
+    /* Bandwidth Mode Cards */
+    .bandwidth-options {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-4);
+    }
+
+    .bandwidth-card {
+      background: var(--color-card-bg);
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      padding: var(--space-6);
+      cursor: pointer;
+      transition: var(--transition-normal);
+      text-align: center;
+    }
+
+    .bandwidth-card:hover {
+      border-color: var(--color-primary-light);
+      transform: translateY(-2px);
+    }
+
+    .bandwidth-card.is-selected {
+      border-color: var(--color-primary);
+      background: rgba(var(--color-primary-rgb), 0.05);
+    }
+
+    .bandwidth-card__icon {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto var(--space-4);
+      color: var(--color-text-muted);
+    }
+
+    .bandwidth-card.is-selected .bandwidth-card__icon {
+      color: var(--color-primary);
+    }
+
+    .bandwidth-card__title {
+      font-size: var(--text-body);
+      font-weight: var(--font-semibold);
+      color: var(--color-text-primary);
+      margin-bottom: var(--space-2);
+    }
+
+    .bandwidth-card__description {
+      font-size: var(--text-caption);
+      color: var(--color-text-muted);
+      line-height: var(--leading-relaxed);
+    }
+
+    /* Toggle Switch Enhanced */
+    .toggle-enhanced {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-4) 0;
+      border-bottom: 1px solid var(--color-border-light);
+    }
+
+    .toggle-enhanced:last-child {
+      border-bottom: none;
+    }
+
+    .toggle-enhanced__content {
+      flex: 1;
+    }
+
+    .toggle-enhanced__label {
+      font-size: var(--text-body);
+      font-weight: var(--font-medium);
+      color: var(--color-text-primary);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .toggle-enhanced__description {
+      font-size: var(--text-caption);
+      color: var(--color-text-muted);
+      margin-top: var(--space-1);
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 52px;
+      height: 28px;
+      background: var(--color-border-dark);
+      border-radius: var(--radius-full);
+      cursor: pointer;
+      transition: var(--transition-fast);
+      flex-shrink: 0;
+    }
+
+    .toggle-switch.is-active {
+      background: var(--color-primary);
+    }
+
+    .toggle-switch__handle {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 24px;
+      height: 24px;
+      background: var(--color-card-bg);
+      border-radius: var(--radius-full);
+      transition: var(--transition-fast);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .toggle-switch.is-active .toggle-switch__handle {
+      transform: translateX(24px);
+    }
+
+    /* Radio Group Cards */
+    .radio-cards {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .radio-card {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-4) var(--space-5);
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      transition: var(--transition-fast);
+    }
+
+    .radio-card:hover {
+      border-color: var(--color-primary-light);
+      background: var(--color-bg-alt);
+    }
+
+    .radio-card.is-selected {
+      border-color: var(--color-primary);
+      background: rgba(var(--color-primary-rgb), 0.05);
+    }
+
+    .radio-card__indicator {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--color-border-dark);
+      border-radius: var(--radius-full);
+      transition: var(--transition-fast);
+      flex-shrink: 0;
+    }
+
+    .radio-card.is-selected .radio-card__indicator {
+      border-color: var(--color-primary);
+      border-width: 6px;
+    }
+
+    .radio-card__content {
+      flex: 1;
+    }
+
+    .radio-card__title {
+      font-size: var(--text-body);
+      font-weight: var(--font-medium);
+      color: var(--color-text-primary);
+    }
+
+    .radio-card__description {
+      font-size: var(--text-caption);
+      color: var(--color-text-muted);
+    }
+
+    /* Range Slider */
+    .range-slider {
+      width: 100%;
+      margin: var(--space-4) 0;
+    }
+
+    .range-slider__input {
+      width: 100%;
+      height: 8px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: var(--color-border);
+      border-radius: var(--radius-full);
+      outline: none;
+    }
+
+    .range-slider__input::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      background: var(--color-primary);
+      border-radius: var(--radius-full);
+      cursor: pointer;
+      transition: var(--transition-fast);
+    }
+
+    .range-slider__input::-webkit-slider-thumb:hover {
+      transform: scale(1.1);
+    }
+
+    .range-slider__labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: var(--text-caption);
+      color: var(--color-text-muted);
+      margin-top: var(--space-2);
+    }
+
+    /* Color Picker */
+    .color-picker {
+      display: flex;
+      gap: var(--space-3);
+      flex-wrap: wrap;
+    }
+
+    .color-option {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-full);
+      cursor: pointer;
+      transition: var(--transition-fast);
+      border: 3px solid transparent;
+    }
+
+    .color-option:hover {
+      transform: scale(1.1);
+    }
+
+    .color-option.is-selected {
+      border-color: var(--color-text-primary);
+    }
+
+    /* Notification Methods */
+    .notification-methods {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-4);
+    }
+
+    .method-card {
+      background: var(--color-card-bg);
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition-fast);
+    }
+
+    .method-card:hover {
+      border-color: var(--color-primary-light);
+    }
+
+    .method-card.is-selected {
+      border-color: var(--color-primary);
+      background: rgba(var(--color-primary-rgb), 0.05);
+    }
+
+    .method-card__icon {
+      width: 32px;
+      height: 32px;
+      margin: 0 auto var(--space-2);
+      color: var(--color-text-muted);
+    }
+
+    .method-card.is-selected .method-card__icon {
+      color: var(--color-primary);
+    }
+
+    .method-card__label {
+      font-size: var(--text-body-sm);
+      font-weight: var(--font-medium);
+      color: var(--color-text-primary);
+    }
+
+    /* Quiet Hours */
+    .quiet-hours {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      margin-top: var(--space-4);
+    }
+
+    .time-input {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .time-input__field {
+      width: 80px;
+      padding: var(--space-2) var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: var(--text-body);
+      text-align: center;
+    }
+
+    /* About Section */
+    .about-card {
+      background: var(--color-card-bg);
+      border-radius: var(--radius-xl);
+      padding: var(--space-6);
+    }
+
+    .about-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-3) 0;
+      border-bottom: 1px solid var(--color-border-light);
+    }
+
+    .about-item:last-child {
+      border-bottom: none;
+    }
+
+    .about-item__label {
+      font-size: var(--text-body);
+      color: var(--color-text-secondary);
+    }
+
+    .about-item__value {
+      font-size: var(--text-body);
+      font-weight: var(--font-medium);
+      color: var(--color-text-primary);
+      font-family: var(--font-mono);
+    }
+
+    /* Data Source Tags */
+    .data-sources {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      margin-top: var(--space-4);
+    }
+
+    .data-source-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+      padding: var(--space-1) var(--space-3);
+      background: var(--color-bg-alt);
+      border-radius: var(--radius-full);
+      font-size: var(--text-caption);
+      color: var(--color-text-secondary);
+    }
+
+    /* Save/Reset Buttons */
+    .settings-actions {
+      display: flex;
+      gap: var(--space-4);
+      justify-content: flex-end;
+      padding: var(--space-6);
+      background: var(--color-card-bg);
+      border-radius: var(--radius-xl);
+      position: sticky;
+      bottom: var(--space-6);
+      box-shadow: var(--shadow-lg);
+    }
+
+    /* Confirmation Modal */
+    .confirm-modal__text {
+      font-size: var(--text-body);
+      color: var(--color-text-secondary);
+      margin-bottom: var(--space-4);
+    }
+
+    .confirm-modal__warning {
+      background: rgba(234, 179, 8, 0.1);
+      border-left: 3px solid var(--color-alert-medium);
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--radius-md);
+      font-size: var(--text-body-sm);
+      color: var(--color-text-secondary);
+    }
+
+    /* Responsive */
+    @media (max-width: 1023px) {
+      .settings-container {
+        flex-direction: column;
+      }
+
+      .settings-sidebar {
+        width: 100%;
+        position: static;
+      }
+
+      .settings-nav {
+        flex-direction: row;
+        overflow-x: auto;
+        padding-bottom: var(--space-2);
+      }
+
+      .settings-nav__item {
+        white-space: nowrap;
+      }
+
+      .bandwidth-options,
+      .notification-methods {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 639px) {
+      .quiet-hours {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .settings-actions {
+        flex-direction: column;
+      }
+    }
+
+    /* Animation for toggle feedback */
+    @keyframes toggleFeedback {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    .toggle-feedback {
+      animation: toggleFeedback 0.3s var(--ease-bounce);
+    }
+
+    /* Section visibility */
+    .settings-panel {
+      display: none;
+    }
+
+    .settings-panel.is-active {
+      display: block;
+      animation: fadeIn 0.3s var(--ease-default);
+    }
+  </style>
+</head>
+<body>
+  <!-- Mobile Menu Toggle -->
+  <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+    <i data-lucide="menu" class="mobile-menu-toggle__icon"></i>
+  </button>
+
+  <!-- Sidebar Overlay -->
+  <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+  <!-- Sidebar Navigation -->
+  <aside id="sidebar" class="sidebar" role="navigation" aria-label="Main navigation">
+    <div class="sidebar__header">
+      <a href="index.html" class="sidebar__logo">
+        <div class="sidebar__logo-icon">
+          <svg viewBox="0 0 100 100" width="40" height="40" aria-hidden="true">
+            <circle cx="50" cy="50" r="45" fill="#1E3A5F"/>
+            <circle cx="50" cy="50" r="35" fill="none" stroke="#7C3AED" stroke-width="3"/>
+            <circle cx="50" cy="50" r="15" fill="#7C3AED"/>
+          </svg>
+        </div>
+        <div class="sidebar__logo-text">
+          <span class="sidebar__logo-title">GeoForecast</span>
+          <span class="sidebar__logo-subtitle">Threat Intelligence</span>
+        </div>
+      </a>
+      <button id="sidebar-close" class="sidebar__close" aria-label="Close navigation menu">
+        <i data-lucide="x" class="sidebar__close-icon"></i>
+      </button>
+    </div>
+
+    <nav class="sidebar__nav">
+      <ul class="sidebar__menu" role="menubar">
+        <li class="sidebar__item" role="none">
+          <a href="index.html" class="sidebar__link" data-page="index" role="menuitem">
+            <span class="sidebar__link-icon"><i data-lucide="globe" aria-hidden="true"></i></span>
+            <span class="sidebar__link-text">Global Overview</span>
+          </a>
+        </li>
+        <li class="sidebar__item" role="none">
+          <a href="predictions.html" class="sidebar__link" data-page="predictions" role="menuitem">
+            <span class="sidebar__link-icon"><i data-lucide="brain" aria-hidden="true"></i></span>
+            <span class="sidebar__link-text">Predictions</span>
+          </a>
+        </li>
+        <li class="sidebar__item" role="none">
+          <a href="timeline.html" class="sidebar__link" data-page="timeline" role="menuitem">
+            <span class="sidebar__link-icon"><i data-lucide="calendar" aria-hidden="true"></i></span>
+            <span class="sidebar__link-text">Timeline</span>
+          </a>
+        </li>
+        <li class="sidebar__item" role="none">
+          <a href="alerts.html" class="sidebar__link" data-page="alerts" role="menuitem">
+            <span class="sidebar__link-icon"><i data-lucide="bell" aria-hidden="true"></i></span>
+            <span class="sidebar__link-text">Alert Center</span>
+            <span id="alert-badge" class="sidebar__badge" aria-label="Unread alerts">0</span>
+          </a>
+        </li>
+        <li class="sidebar__item" role="none">
+          <a href="settings.html" class="sidebar__link is-active" data-page="settings" role="menuitem" aria-current="page">
+            <span class="sidebar__link-icon"><i data-lucide="settings" aria-hidden="true"></i></span>
+            <span class="sidebar__link-text">Settings</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <div class="sidebar__footer">
+      <div class="sidebar__bandwidth" id="bandwidth-indicator">
+        <span class="sidebar__bandwidth-label">Mode:</span>
+        <span class="sidebar__bandwidth-value" id="bandwidth-value">Auto</span>
+      </div>
+      <div class="sidebar__user">
+        <div class="sidebar__user-avatar">
+          <i data-lucide="user" aria-hidden="true"></i>
+        </div>
+        <div class="sidebar__user-info">
+          <span class="sidebar__user-name">Guest User</span>
+          <span class="sidebar__user-role">Analyst</span>
+        </div>
+      </div>
+      <div class="sidebar__version">
+        <span>v1.0.0</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Settings Header -->
+    <div class="section">
+      <div class="container">
+        <div class="settings-section__header" style="border-bottom: none; margin-bottom: var(--space-4);">
+          <div>
+            <h1 class="h1">Settings</h1>
+            <p class="settings-section__description">Customize your dashboard experience and preferences</p>
+          </div>
+          <div class="flex gap-4">
+            <button class="btn btn-secondary" id="reset-settings">
+              <i data-lucide="rotate-ccw" style="width: 18px; height: 18px;"></i>
+              Reset to Defaults
+            </button>
+            <button class="btn btn-primary" id="save-settings">
+              <i data-lucide="save" style="width: 18px; height: 18px;"></i>
+              Save Changes
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Container -->
+    <div class="section" style="padding-top: 0;">
+      <div class="container">
+        <div class="settings-container">
+          <!-- Settings Sidebar -->
+          <aside class="settings-sidebar">
+            <nav class="settings-nav">
+              <div class="settings-nav__item is-active" data-target="performance">
+                <i data-lucide="zap" class="settings-nav__icon"></i>
+                <span>Performance</span>
+              </div>
+              <div class="settings-nav__item" data-target="display">
+                <i data-lucide="monitor" class="settings-nav__icon"></i>
+                <span>Display</span>
+              </div>
+              <div class="settings-nav__item" data-target="notifications">
+                <i data-lucide="bell-ring" class="settings-nav__icon"></i>
+                <span>Notifications</span>
+              </div>
+              <div class="settings-nav__item" data-target="data">
+                <i data-lucide="database" class="settings-nav__icon"></i>
+                <span>Data & Refresh</span>
+              </div>
+              <div class="settings-nav__item" data-target="privacy">
+                <i data-lucide="shield" class="settings-nav__icon"></i>
+                <span>Privacy</span>
+              </div>
+              <div class="settings-nav__item" data-target="about">
+                <i data-lucide="info" class="settings-nav__icon"></i>
+                <span>About</span>
+              </div>
+            </nav>
+          </aside>
+
+          <!-- Settings Content -->
+          <div class="settings-content">
+            <!-- Performance Panel -->
+            <div class="settings-panel is-active" id="performance-panel">
+              <!-- Bandwidth Mode Selector -->
+              <div class="card settings-section">
+                <div class="settings-section__header">
+                  <div>
+                    <h2 class="settings-section__title">Bandwidth Mode</h2>
+                    <p class="settings-section__description">Optimize performance based on your connection speed</p>
+                  </div>
+                  <div class="toggle-enhanced" style="padding: 0; border: none;">
+                    <div class="toggle-enhanced__content">
+                      <span class="toggle-enhanced__label">Auto-detect</span>
+                    </div>
+                    <div class="toggle-switch" id="auto-detect-toggle">
+                      <div class="toggle-switch__handle"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="bandwidth-options" id="bandwidth-options">
+                  <div class="bandwidth-card" data-mode="high">
+                    <i data-lucide="wifi-high" class="bandwidth-card__icon"></i>
+                    <h3 class="bandwidth-card__title">High Bandwidth</h3>
+                    <p class="bandwidth-card__description">Full 3D globe, all animations, particle effects, real-time updates</p>
+                  </div>
+                  <div class="bandwidth-card" data-mode="medium">
+                    <i data-lucide="wifi-medium" class="bandwidth-card__icon"></i>
+                    <h3 class="bandwidth-card__title">Medium Bandwidth</h3>
+                    <p class="bandwidth-card__description">Simplified 3D, reduced animations, 30fps, polling updates</p>
+                  </div>
+                  <div class="bandwidth-card" data-mode="low">
+                    <i data-lucide="wifi-low" class="bandwidth-card__icon"></i>
+                    <h3 class="bandwidth-card__title">Low Bandwidth</h3>
+                    <p class="bandwidth-card__description">2D map only, minimal animations, data priority, manual refresh</p>
+                  </div>
+                </div>
+
+                <div id="current-mode-indicator" style="margin-top: var(--space-4); padding: var(--space-3); background: var(--color-bg-alt); border-radius: var(--radius-md); display: flex; align-items: center; gap: var(--space-2);">
+                  <i data-lucide="info" style="width: 16px; height: 16px; color: var(--color-text-muted);"></i>
+                  <span style="font-size: var(--text-body-sm); color: var(--color-text-secondary);">Current mode: <strong id="current-mode-text">High Bandwidth</strong></span>
+                </div>
+              </div>
+
+              <!-- 3D/2D Map Toggle -->
+              <div class="card settings-section">
+                <div class="settings-section__header">
+                  <div>
+                    <h2 class="settings-section__title">Map Display</h2>
+                    <p class="settings-section__description">Choose your preferred map visualization mode</p>
+                  </div>
+                </div>
+
+                <div class="radio-cards" id="map-mode-options">
+                  <div class="radio-card is-selected" data-map-mode="auto">
+                    <div class="radio-card__indicator"></div>
+                    <div class="radio-card__content">
+                      <div class="radio-card__title">Auto (Based on Bandwidth)</div>
+                      <div class="radio-card__description">Automatically switch between 3D and 2D based on your connection</div>
+                    </div>
+                  </div>
+                  <div class="radio-card" data-map-mode="3d">
+                    <div class="radio-card__indicator"></div>
+                    <div class="radio-card__content">
+                      <div class="radio-card__title">Prefer 3D When Available</div>
+                      <div class="radio-card__description">Use 3D globe visualization when bandwidth allows</div>
+                    </div>
+                  </div>
+                  <div class="radio-card" data-map-mode="2d">
+                    <div class="radio-card__indicator"></div>
+                    <div class="radio-card__content">
+                      <div class="radio-card__title">Force 2D Mode</div>
+                      <div class="radio-card__description">Always use 2D map for better performance</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Animation Preferences -->
+              <div class="card settings-section">
+                <div class="settings-section__header">
+                  <div>
+                    <h2 class="settings-section__title">Animation Preferences</h2>
+                    <p class="settings-section__description">Control visual animations throughout the dashboard</p>
+                  </div>
+                </div>
+
+                <div class="radio-cards" id="animation-options">
+                  <div class="radio-card is-selected" data-animation="all">
+                    <div class="radio-card__indicator"></div>
+                    <div class="radio-card__content">
+                      <div class="radio-card__title">Enable All Animations</div>
+                      <div class="radio-card__description">Full visual experience with all transitions and effects</div>
+                    </div>
+                  </div>
+                  <div class="radio-card" data-animation="reduced">
+                    <div class="radio-card__indicator"></div>
+                    <div class="radio-card__content">
+                      <div class="radio-card__title">Reduce Animations</div>
+                      <div class="radio-card__description">Simplified transitions, fewer particle effects</div>
+                    </div>
+                  </div>
+                  <div class="radio-card" data-animation="none">
+                    <div class="radio-card__indicator"></div>
+                    <div class="radio-card__content">
+                      <div class="radio-card__title">Disable Animations</div>
+                      <div class="radio-card__description">Minimal animations for maximum performance</div>
+                    </div>
+                  </div>
+                  <div class="radio-card" data-animation="custom">
+                    <div class="radio-card__indicator"></div>
+                    <div class="radio-card__content">
+                      <div class="radio-card__title">Custom</div>
+                      <div class="radio-card__description">Choose which animations to enable</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Custom Animation Options -->
+                <div id="custom-animations" style="display: none; margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--color-border-light);">
+                  <h4 style="font-size: var(--text-body-sm); font-weight: var(--font-semibold); color: var(--color-text-secondary); margin-bottom: var(--space-3); text-transform: uppercase; letter-spacing: var(--tracking-overline);">Custom Animation Settings</h4>
+                  
+                  <div class="toggle-enhanced">
+                    <div class="toggle-enhanced__content">
+                      <span class="toggle-enhanced__label">Globe Rotation</span>
+                      <p class="toggle-enhanced__description">Continuous rotation of the 3D globe</p>
+                    </div>
+                    <div class="toggle-switch is-active" data-custom="globe-rotation">
+                      <div class="toggle-switch__handle"></div>
+                    </div>
+                  </div>
+
+                  <div class="toggle-enhanced">
+                    <div class="toggle-enhanced__content">
+                      <span class="toggle-enhanced__label">Marker Pulse Effects</span>
+                      <p class="toggle-enhanced__description">Pulsing glow on location markers</p>
+                    </div>
+                    <div class="toggle-switch is-active" data-custom="marker-pulse">
+                      <div class="toggle-switch__handle"></div>
+                    </div>
+                  </div>
+
+                  <div class="toggle-enhanced">
+                    <div class="toggle-enhanced__content">
+                      <span class="toggle-enhanced__label">Card Hover Effects</span>
+                      <p class="toggle-enhanced__description">Scale and shadow on card hover</p>
+                    </div>
+                    <div class="toggle-switch is-active" data-custom="card-hover">
+                      <div class="toggle-switch__handle"></div>
+                    </div>
+                  </div>
+
+                  <div class="toggle-enhanced">
+                    <div class="toggle-enhanced__content">
+                      <span class="toggle-enhanced__label">Scroll Animations</span>
+                      <p class="toggle-enhanced__description">Fade-in effects when scrolling</p>
+                    </div>
+                    <div class="toggle-switch is-active" data-custom="scroll-animations">
+                      <div class="toggle-switch__handle"></div>
+                    </div>
+                  </div>
+
+                  <div class="toggle-enhanced">
+                    <div class="toggle-enhanced__content">
+                      <span class="toggle-enhanced__label">Alert Ticker</span>
+                      <p class="toggle-enhanced__description">Scrolling alert ticker animation</p>
+                    </div>
+                    <div class="toggle-switch is-active" data-custom="alert-ticker">
+                      <div class="toggle-switch__handle"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Display Panel -->
+            <div class="settings-panel" id="display-panel">
+              <!-- Theme Preferences -->
+              <div class="card settings-section">
+                <div class="settings-section__header">
+                  <div>
+                    <h2 class="settings-section__title">Theme Preferences</h2>
+                    <p class="settings-section__description">Choose your preferred visual theme</p>
+                  </div>
+                </div>
+
+                <div class="radio-cards" id="theme-options">
+                  <div class="radio-card is-selected" data-theme="light">
+                    <div class="radio-card__indicator"></div>
+                    <div class="radio-card__content">
+                      <div class="radio-card__title">Light Mode</div>
+                      <div class="radio-card__description">Clean, bright interface for daytime use</div>
+                    </div>
+                  </div>
+                  <div class="radio-card" data-theme="dark">
+                    <div class="radio-card__indicator"></div>
+                    <div class="radio-card__content">
+                      <div class="radio-card__title">Dark Mode</div>
+                      <div class="radio-card__description">Easy on the eyes for low-light conditions</div>
+                    </div>
+                  </div>
+                  <div class="radio-card" data-theme="system">
+                    <div class="radio-card__indicator"></div>
+                    <div class="radio-card__content">
+                      <div class="radio-card__title">System Preference</div>
+                      <div class="radio-card__description">Follow your device's theme setting</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Accent Color -->
+                <div style="margin-top: var(--space-6);">
+                  <h4 style="font-size: var(--text-body); font-weight: var(--font-medium); color: var(--color-text-primary); margin-bottom: var(--space-3);">Accent Color</h4>
+                  <div class="color-picker" id="accent-colors">
+                    <div class="color-option is-selected" style="background: #7C3AED;" data-color="#7C3AED"></div>
+                    <div class="color-option" style="background: #3B82F6;" data-color="#3B82F6"></div>
+                    <div class="color-option" style="background: #14B8A6;" data-color="#14B8A6"></div>
+                    <div class="color-option" style="background: #F97316;" data-color="#F97316"></div>
+                    <div class="color-option" style="background: #DC2626;" data-color="#DC2626"></div>
+                    <div class="color-option" style="background: #EC4899;" data-color="#EC4899"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Notifications Panel -->
+            <div class="settings-panel" id="notifications-panel">
+              <!-- Notification Settings -->
+              <div class="card settings-section">
+                <div class="settings-section__header">
+                  <div>
+                    <h2 class="settings-section__title">Notification Settings</h2>
+                    <p class="settings-section__description">Configure how and when you receive alerts</p>
+                  </div>
+                </div>
+
+                <div class="toggle-enhanced">
+                  <div class="toggle-enhanced__content">
+                    <span class="toggle-enhanced__label">
+                      <i data-lucide="bell" style="width: 18px; height: 18px;"></i>
+                      Enable Notifications
+                    </span>
+                    <p class="toggle-enhanced__description">Receive alerts and updates from the dashboard</p>
+                  </div>
+                  <div class="toggle-switch" id="notifications-toggle">
+                    <div class="toggle-switch__handle"></div>
+                  </div>
+                </div>
+
+                <!-- Alert Severity Threshold -->
+                <div style="margin-top: var(--space-6);">
+                  <h4 style="font-size: var(--text-body); font-weight: var(--font-medium); color: var(--color-text-primary); margin-bottom: var(--space-3);">Alert Severity Threshold</h4>
+                  <p style="font-size: var(--text-caption); color: var(--color-text-muted); margin-bottom: var(--space-3);">Only receive alerts at or above this severity level</p>
+                  
+                  <div class="radio-cards" id="severity-options">
+                    <div class="radio-card" data-severity="critical">
+                      <div class="radio-card__indicator"></div>
+                      <div class="radio-card__content">
+                        <div class="radio-card__title" style="color: var(--color-alert-critical);">Critical Only</div>
+                        <div class="radio-card__description">Most severe alerts only</div>
+                      </div>
+                    </div>
+                    <div class="radio-card" data-severity="high">
+                      <div class="radio-card__indicator"></div>
+                      <div class="radio-card__content">
+                        <div class="radio-card__title" style="color: var(--color-alert-high);">High & Above</div>
+                        <div class="radio-card__description">High severity and critical alerts</div>
+                      </div>
+                    </div>
+                    <div class="radio-card is-selected" data-severity="medium">
+                      <div class="radio-card__indicator"></div>
+                      <div class="radio-card__content">
+                        <div class="radio-card__title" style="color: var(--color-alert-medium);">Medium & Above</div>
+                        <div class="radio-card__description">Medium, high, and critical alerts</div>
+                      </div>
+                    </div>
+                    <div class="radio-card" data-severity="low">
+                      <div class="radio-card__indicator"></div>
+                      <div class="radio-card__content">
+                        <div class="radio-card__title" style="color: var(--color-alert-low);">All Alerts</div>
+                        <div class="radio-card__description">Receive all alert severities</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Geographic Scope -->
+                <div style="margin-top: var(--space-6);">
+                  <h4 style="font-size: var(--text-body); font-weight: var(--font-medium); color: var(--color-text-primary); margin-bottom: var(--space-3);">Geographic Scope</h4>
+                  <div class="form-group" style="margin-bottom: var(--space-3);">
+                    <label class="form-label">Region</label>
+                    <select class="form-select" id="region-select">
+                      <option value="global">Global (All Regions)</option>
+                      <option value="north-america">North America</option>
+                      <option value="south-america">South America</option>
+                      <option value="europe">Europe</option>
+                      <option value="africa">Africa</option>
+                      <option value="asia">Asia</option>
+                      <option value="oceania">Oceania</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Specific Countries (optional)</label>
+                    <input type="text" class="form-input" placeholder="Enter country codes (e.g., US, UK, CA)" id="countries-input">
+                  </div>
+                </div>
+
+                <!-- Quiet Hours -->
+                <div style="margin-top: var(--space-6);">
+                  <h4 style="font-size: var(--text-body); font-weight: var(--font-medium); color: var(--color-text-primary); margin-bottom: var(--space-3);">Quiet Hours</h4>
+                  <div class="toggle-enhanced" style="padding-top: 0;">
+                    <div class="toggle-enhanced__content">
+                      <span class="toggle-enhanced__label">Enable Quiet Hours</span>
+                      <p class="toggle-enhanced__description">Pause notifications during specified hours</p>
+                    </div>
+                    <div class="toggle-switch" id="quiet-hours-toggle">
+                      <div class="toggle-switch__handle"></div>
+                    </div>
+                  </div>
+                  
+                  <div class="quiet-hours" id="quiet-hours-inputs" style="display: none;">
+                    <div class="time-input">
+                      <span style="font-size: var(--text-body-sm); color: var(--color-text-secondary);">From</span>
+                      <input type="time" class="time-input__field" value="22:00" id="quiet-start">
+                    </div>
+                    <div class="time-input">
+                      <span style="font-size: var(--text-body-sm); color: var(--color-text-secondary);">To</span>
+                      <input type="time" class="time-input__field" value="07:00" id="quiet-end">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Notification Methods -->
+                <div style="margin-top: var(--space-6);">
+                  <h4 style="font-size: var(--text-body); font-weight: var(--font-medium); color: var(--color-text-primary); margin-bottom: var(--space-3);">Notification Methods</h4>
+                  <div class="notification-methods" id="notification-methods">
+                    <div class="method-card is-selected" data-method="browser">
+                      <i data-lucide="monitor" class="method-card__icon"></i>
+                      <span class="method-card__label">Browser</span>
+                    </div>
+                    <div class="method-card" data-method="email">
+                      <i data-lucide="mail" class="method-card__icon"></i>
+                      <span class="method-card__label">Email</span>
+                    </div>
+                    <div class="method-card" data-method="sms">
+                      <i data-lucide="smartphone" class="method-card__icon"></i>
+                      <span class="method-card__label">SMS</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Data & Refresh Panel -->
+            <div class="settings-panel" id="data-panel">
+              <!-- Data Refresh Rates -->
+              <div class="card settings-section">
+                <div class="settings-section__header">
+                  <div>
+                    <h2 class="settings-section__title">Data Refresh Rates</h2>
+                    <p class="settings-section__description">Control how frequently data is updated</p>
+                  </div>
+                </div>
+
+                <div class="radio-cards" id="refresh-options">
+                  <div class="radio-card" data-refresh="realtime">
+                    <div class="radio-card__indicator"></div>
+                    <div class="radio-card__content">
+                      <div class="radio-card__title">Real-time (WebSocket)</div>
+                      <div class="radio-card__description">Live updates as data changes - highest bandwidth usage</div>
+                    </div>
+                  </div>
+                  <div class="radio-card" data-refresh="30s">
+                    <div class="radio-card__indicator"></div>
+                    <div class="radio-card__content">
+                      <div class="radio-card__title">Every 30 Seconds</div>
+                      <div class="radio-card__description">Frequent updates for time-sensitive monitoring</div>
+                    </div>
+                  </div>
+                  <div class="radio-card is-selected" data-refresh="60s">
+                    <div class="radio-card__indicator"></div>
+                    <div class="radio-card__content">
+                      <div class="radio-card__title">Every Minute</div>
+                      <div class="radio-card__description">Balanced update frequency for most users</div>
+                    </div>
+                  </div>
+                  <div class="radio-card" data-refresh="5m">
+                    <div class="radio-card__indicator"></div>
+                    <div class="radio-card__content">
+                      <div class="radio-card__title">Every 5 Minutes</div>
+                      <div class="radio-card__description">Reduced frequency for lower bandwidth usage</div>
+                    </div>
+                  </div>
+                  <div class="radio-card" data-refresh="manual">
+                    <div class="radio-card__indicator"></div>
+                    <div class="radio-card__content">
+                      <div class="radio-card__title">Manual Refresh Only</div>
+                      <div class="radio-card__description">Update only when you click the refresh button</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Privacy Panel -->
+            <div class="settings-panel" id="privacy-panel">
+              <!-- Privacy Settings -->
+              <div class="card settings-section">
+                <div class="settings-section__header">
+                  <div>
+                    <h2 class="settings-section__title">Privacy Settings</h2>
+                    <p class="settings-section__description">Control your data and privacy preferences</p>
+                  </div>
+                </div>
+
+                <div class="toggle-enhanced">
+                  <div class="toggle-enhanced__content">
+                    <span class="toggle-enhanced__label">Data Collection Consent</span>
+                    <p class="toggle-enhanced__description">Allow anonymous usage data collection to improve the dashboard</p>
+                  </div>
+                  <div class="toggle-switch is-active" id="data-collection-toggle">
+                    <div class="toggle-switch__handle"></div>
+                  </div>
+                </div>
+
+                <div class="toggle-enhanced">
+                  <div class="toggle-enhanced__content">
+                    <span class="toggle-enhanced__label">Location Services</span>
+                    <p class="toggle-enhanced__description">Allow access to your location for local threat monitoring</p>
+                  </div>
+                  <div class="toggle-switch" id="location-toggle">
+                    <div class="toggle-switch__handle"></div>
+                  </div>
+                </div>
+
+                <div class="toggle-enhanced">
+                  <div class="toggle-enhanced__content">
+                    <span class="toggle-enhanced__label">Analytics Opt-out</span>
+                    <p class="toggle-enhanced__description">Disable analytics tracking (requires page refresh)</p>
+                  </div>
+                  <div class="toggle-switch" id="analytics-toggle">
+                    <div class="toggle-switch__handle"></div>
+                  </div>
+                </div>
+
+                <!-- Data Actions -->
+                <div style="margin-top: var(--space-6); padding-top: var(--space-6); border-top: 1px solid var(--color-border-light);">
+                  <h4 style="font-size: var(--text-body); font-weight: var(--font-medium); color: var(--color-text-primary); margin-bottom: var(--space-4);">Data Actions</h4>
+                  
+                  <div class="flex gap-4 flex-wrap">
+                    <button class="btn btn-secondary" id="clear-data-btn">
+                      <i data-lucide="trash-2" style="width: 18px; height: 18px;"></i>
+                      Clear Local Data
+                    </button>
+                    <button class="btn btn-secondary" id="export-data-btn">
+                      <i data-lucide="download" style="width: 18px; height: 18px;"></i>
+                      Export My Data
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- About Panel -->
+            <div class="settings-panel" id="about-panel">
+              <!-- About Section -->
+              <div class="card settings-section">
+                <div class="settings-section__header">
+                  <div>
+                    <h2 class="settings-section__title">About GeoForecast</h2>
+                    <p class="settings-section__description">Version information and data sources</p>
+                  </div>
+                </div>
+
+                <div class="about-card">
+                  <div class="about-item">
+                    <span class="about-item__label">Version</span>
+                    <span class="about-item__value">1.0.0</span>
+                  </div>
+                  <div class="about-item">
+                    <span class="about-item__label">Build Date</span>
+                    <span class="about-item__value">2024.01.15</span>
+                  </div>
+                  <div class="about-item">
+                    <span class="about-item__label">Environment</span>
+                    <span class="about-item__value">Production</span>
+                  </div>
+                </div>
+
+                <!-- Data Sources -->
+                <div style="margin-top: var(--space-6);">
+                  <h4 style="font-size: var(--text-body); font-weight: var(--font-medium); color: var(--color-text-primary); margin-bottom: var(--space-3);">Data Sources</h4>
+                  <div class="data-sources">
+                    <span class="data-source-tag"><i data-lucide="database" style="width: 12px; height: 12px;"></i> WHO</span>
+                    <span class="data-source-tag"><i data-lucide="database" style="width: 12px; height: 12px;"></i> World Bank</span>
+                    <span class="data-source-tag"><i data-lucide="database" style="width: 12px; height: 12px;"></i> UN</span>
+                    <span class="data-source-tag"><i data-lucide="database" style="width: 12px; height: 12px;"></i> NOAA</span>
+                    <span class="data-source-tag"><i data-lucide="database" style="width: 12px; height: 12px;"></i> USGS</span>
+                    <span class="data-source-tag"><i data-lucide="database" style="width: 12px; height: 12px;"></i> ECDC</span>
+                  </div>
+                  <p style="font-size: var(--text-caption); color: var(--color-text-muted); margin-top: var(--space-3);">
+                    Predictions are algorithmic estimates and should not be considered as definitive forecasts.
+                  </p>
+                </div>
+
+                <!-- Legal Links -->
+                <div style="margin-top: var(--space-6); padding-top: var(--space-6); border-top: 1px solid var(--color-border-light);">
+                  <h4 style="font-size: var(--text-body); font-weight: var(--font-medium); color: var(--color-text-primary); margin-bottom: var(--space-4);">Legal</h4>
+                  <div class="flex gap-4 flex-wrap">
+                    <a href="#terms" class="btn btn-secondary">
+                      <i data-lucide="file-text" style="width: 18px; height: 18px;"></i>
+                      Terms of Service
+                    </a>
+                    <a href="#privacy" class="btn btn-secondary">
+                      <i data-lucide="shield" style="width: 18px; height: 18px;"></i>
+                      Privacy Policy
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Sticky Save Actions -->
+            <div class="settings-actions" id="sticky-actions">
+              <button class="btn btn-secondary" id="sticky-reset">
+                <i data-lucide="rotate-ccw" style="width: 18px; height: 18px;"></i>
+                Reset to Defaults
+              </button>
+              <button class="btn btn-primary" id="sticky-save">
+                <i data-lucide="save" style="width: 18px; height: 18px;"></i>
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+      <div class="footer__container">
+        <div class="footer__main">
+          <div class="footer__brand">
+            <a href="index.html" class="footer__logo">
+              <div class="footer__logo-icon">
+                <svg viewBox="0 0 100 100" width="48" height="48" aria-hidden="true">
+                  <circle cx="50" cy="50" r="45" fill="#7C3AED"/>
+                  <circle cx="50" cy="50" r="35" fill="none" stroke="#FFFFFF" stroke-width="3"/>
+                  <circle cx="50" cy="50" r="15" fill="#FFFFFF"/>
+                </svg>
+              </div>
+              <div class="footer__logo-text">
+                <span class="footer__logo-title">GeoForecast</span>
+                <span class="footer__logo-tagline">Global Threat Intelligence</span>
+              </div>
+            </a>
+            <p class="footer__description">
+              Advanced geopolitical forecasting using game theory, astrological patterns, 
+              and data-driven analytics to provide actionable intelligence for decision makers.
+            </p>
+            <div class="footer__social">
+              <a href="#" class="footer__social-link" aria-label="Twitter">
+                <i data-lucide="twitter" aria-hidden="true"></i>
+              </a>
+              <a href="#" class="footer__social-link" aria-label="LinkedIn">
+                <i data-lucide="linkedin" aria-hidden="true"></i>
+              </a>
+              <a href="#" class="footer__social-link" aria-label="GitHub">
+                <i data-lucide="github" aria-hidden="true"></i>
+              </a>
+              <a href="#" class="footer__social-link" aria-label="RSS Feed">
+                <i data-lucide="rss" aria-hidden="true"></i>
+              </a>
+            </div>
+          </div>
+
+          <div class="footer__column">
+            <h3 class="footer__heading">Quick Links</h3>
+            <ul class="footer__links">
+              <li><a href="index.html" class="footer__link">Global Overview</a></li>
+              <li><a href="predictions.html" class="footer__link">Predictions Hub</a></li>
+              <li><a href="timeline.html" class="footer__link">Events Timeline</a></li>
+              <li><a href="alerts.html" class="footer__link">Alert Center</a></li>
+              <li><a href="settings.html" class="footer__link">Settings</a></li>
+            </ul>
+          </div>
+
+          <div class="footer__column">
+            <h3 class="footer__heading">Resources</h3>
+            <ul class="footer__links">
+              <li><a href="#documentation" class="footer__link">Documentation</a></li>
+              <li><a href="#api" class="footer__link">API Reference</a></li>
+              <li><a href="#methodology" class="footer__link">Methodology</a></li>
+              <li><a href="#data-sources" class="footer__link">Data Sources</a></li>
+              <li><a href="#faq" class="footer__link">FAQ</a></li>
+            </ul>
+          </div>
+
+          <div class="footer__column">
+            <h3 class="footer__heading">Contact</h3>
+            <ul class="footer__links">
+              <li><a href="#about" class="footer__link">About Us</a></li>
+              <li><a href="#contact" class="footer__link">Contact Support</a></li>
+              <li><a href="#feedback" class="footer__link">Send Feedback</a></li>
+              <li><a href="#report" class="footer__link">Report an Issue</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="footer__attribution">
+          <div class="footer__attribution-content">
+            <i data-lucide="database" class="footer__attribution-icon" aria-hidden="true"></i>
+            <span class="footer__attribution-text">
+              Data sources: WHO, World Bank, UN, NOAA, USGS, ECDC, and other public health 
+              and safety organizations. Predictions are algorithmic estimates and should not 
+              be considered as definitive forecasts.
+            </span>
+          </div>
+        </div>
+
+        <div class="footer__bottom">
+          <div class="footer__legal">
+            <span class="footer__copyright">
+              &copy; <span id="footer-year">2024</span> GeoForecast. All rights reserved.
+            </span>
+            <nav class="footer__legal-nav" aria-label="Legal links">
+              <a href="#privacy" class="footer__legal-link">Privacy Policy</a>
+              <a href="#terms" class="footer__legal-link">Terms of Service</a>
+              <a href="#cookies" class="footer__legal-link">Cookie Policy</a>
+              <a href="#accessibility" class="footer__legal-link">Accessibility</a>
+            </nav>
+          </div>
+          <div class="footer__version">
+            <span class="footer__version-label">Version</span>
+            <span class="footer__version-number">1.0.0</span>
+            <span class="footer__version-separator">|</span>
+            <span class="footer__build">Build 2024.01.15</span>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </main>
+
+  <!-- Confirmation Modal -->
+  <div class="modal-backdrop" id="confirm-modal-backdrop"></div>
+  <div class="modal" id="confirm-modal">
+    <div class="modal__header">
+      <h3 class="modal__title" id="confirm-modal-title">Confirm Action</h3>
+      <button class="modal__close" id="confirm-modal-close">
+        <i data-lucide="x" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div class="modal__body">
+      <p class="confirm-modal__text" id="confirm-modal-text">Are you sure you want to proceed?</p>
+      <div class="confirm-modal__warning" id="confirm-modal-warning" style="display: none;">
+        <i data-lucide="alert-triangle" style="width: 16px; height: 16px; margin-right: var(--space-2); vertical-align: middle;"></i>
+        <span id="confirm-modal-warning-text">This action cannot be undone.</span>
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn-secondary" id="confirm-modal-cancel">Cancel</button>
+      <button class="btn btn-primary" id="confirm-modal-confirm">Confirm</button>
+    </div>
+  </div>
+
+  <script src="../shared/scripts.js"></script>
+  <script>
+    // Settings Page JavaScript
+    (function() {
+      'use strict';
+
+      // Default settings
+      const defaultSettings = {
+        bandwidthMode: 'high',
+        autoDetectBandwidth: false,
+        mapMode: 'auto',
+        animationPreference: 'all',
+        customAnimations: {
+          globeRotation: true,
+          markerPulse: true,
+          cardHover: true,
+          scrollAnimations: true,
+          alertTicker: true
+        },
+        theme: 'light',
+        accentColor: '#7C3AED',
+        notifications: {
+          enabled: false,
+          severityThreshold: 'medium',
+          region: 'global',
+          countries: '',
+          quietHours: {
+            enabled: false,
+            start: '22:00',
+            end: '07:00'
+          },
+          methods: ['browser']
+        },
+        refreshRate: '60s',
+        privacy: {
+          dataCollection: true,
+          locationServices: false,
+          analyticsOptOut: false
+        }
+      };
+
+      // Current settings
+      let currentSettings = { ...defaultSettings };
+
+      // DOM Elements
+      const elements = {
+        bandwidthCards: document.querySelectorAll('.bandwidth-card'),
+        autoDetectToggle: document.getElementById('auto-detect-toggle'),
+        currentModeText: document.getElementById('current-mode-text'),
+        mapModeOptions: document.querySelectorAll('[data-map-mode]'),
+        animationOptions: document.querySelectorAll('[data-animation]'),
+        customAnimationsPanel: document.getElementById('custom-animations'),
+        customAnimationToggles: document.querySelectorAll('[data-custom]'),
+        themeOptions: document.querySelectorAll('[data-theme]'),
+        accentColors: document.querySelectorAll('[data-color]'),
+        notificationsToggle: document.getElementById('notifications-toggle'),
+        severityOptions: document.querySelectorAll('[data-severity]'),
+        quietHoursToggle: document.getElementById('quiet-hours-toggle'),
+        quietHoursInputs: document.getElementById('quiet-hours-inputs'),
+        notificationMethods: document.querySelectorAll('[data-method]'),
+        refreshOptions: document.querySelectorAll('[data-refresh]'),
+        dataCollectionToggle: document.getElementById('data-collection-toggle'),
+        locationToggle: document.getElementById('location-toggle'),
+        analyticsToggle: document.getElementById('analytics-toggle'),
+        settingsNavItems: document.querySelectorAll('.settings-nav__item'),
+        settingsPanels: document.querySelectorAll('.settings-panel'),
+        saveButtons: [document.getElementById('save-settings'), document.getElementById('sticky-save')],
+        resetButtons: [document.getElementById('reset-settings'), document.getElementById('sticky-reset')],
+        confirmModal: document.getElementById('confirm-modal'),
+        confirmModalBackdrop: document.getElementById('confirm-modal-backdrop'),
+        confirmModalTitle: document.getElementById('confirm-modal-title'),
+        confirmModalText: document.getElementById('confirm-modal-text'),
+        confirmModalWarning: document.getElementById('confirm-modal-warning'),
+        confirmModalWarningText: document.getElementById('confirm-modal-warning-text'),
+        confirmModalConfirm: document.getElementById('confirm-modal-confirm'),
+        confirmModalCancel: document.getElementById('confirm-modal-cancel'),
+        confirmModalClose: document.getElementById('confirm-modal-close')
+      };
+
+      // Initialize
+      function init() {
+        loadSettings();
+        setupEventListeners();
+        updateUI();
+        lucide.createIcons();
+      }
+
+      // Load settings from localStorage
+      function loadSettings() {
+        try {
+          const saved = localStorage.getItem('geoForecast_settings');
+          if (saved) {
+            currentSettings = { ...defaultSettings, ...JSON.parse(saved) };
+          }
+        } catch (e) {
+          console.warn('Could not load settings:', e);
+        }
+      }
+
+      // Save settings to localStorage
+      function saveSettings() {
+        try {
+          localStorage.setItem('geoForecast_settings', JSON.stringify(currentSettings));
+          
+          // Apply bandwidth mode
+          if (window.GeoForecast && window.GeoForecast.BandwidthManager) {
+            window.GeoForecast.BandwidthManager.set(currentSettings.bandwidthMode);
+          }
+          
+          // Show success notification
+          if (window.GeoForecast && window.GeoForecast.notify) {
+            window.GeoForecast.notify.success('Your settings have been saved successfully.', 'Settings Saved');
+          }
+        } catch (e) {
+          console.warn('Could not save settings:', e);
+          if (window.GeoForecast && window.GeoForecast.notify) {
+            window.GeoForecast.notify.error('Failed to save settings. Please try again.', 'Error');
+          }
+        }
+      }
+
+      // Reset settings to defaults
+      function resetSettings() {
+        currentSettings = { ...defaultSettings };
+        try {
+          localStorage.removeItem('geoForecast_settings');
+          updateUI();
+          
+          if (window.GeoForecast && window.GeoForecast.notify) {
+            window.GeoForecast.notify.success('Settings have been reset to defaults.', 'Settings Reset');
+          }
+        } catch (e) {
+          console.warn('Could not reset settings:', e);
+        }
+      }
+
+      // Update UI based on current settings
+      function updateUI() {
+        // Bandwidth mode
+        elements.bandwidthCards.forEach(card => {
+          card.classList.toggle('is-selected', card.dataset.mode === currentSettings.bandwidthMode);
+        });
+        elements.autoDetectToggle.classList.toggle('is-active', currentSettings.autoDetectBandwidth);
+        elements.currentModeText.textContent = currentSettings.bandwidthMode.charAt(0).toUpperCase() + 
+          currentSettings.bandwidthMode.slice(1) + ' Bandwidth';
+
+        // Map mode
+        elements.mapModeOptions.forEach(option => {
+          option.classList.toggle('is-selected', option.dataset.mapMode === currentSettings.mapMode);
+        });
+
+        // Animation preference
+        elements.animationOptions.forEach(option => {
+          option.classList.toggle('is-selected', option.dataset.animation === currentSettings.animationPreference);
+        });
+        elements.customAnimationsPanel.style.display = 
+          currentSettings.animationPreference === 'custom' ? 'block' : 'none';
+
+        // Custom animation toggles
+        elements.customAnimationToggles.forEach(toggle => {
+          const key = toggle.dataset.custom.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+          toggle.classList.toggle('is-active', currentSettings.customAnimations[key]);
+        });
+
+        // Theme
+        elements.themeOptions.forEach(option => {
+          option.classList.toggle('is-selected', option.dataset.theme === currentSettings.theme);
+        });
+
+        // Accent color
+        elements.accentColors.forEach(color => {
+          color.classList.toggle('is-selected', color.dataset.color === currentSettings.accentColor);
+        });
+
+        // Notifications
+        elements.notificationsToggle.classList.toggle('is-active', currentSettings.notifications.enabled);
+
+        // Severity threshold
+        elements.severityOptions.forEach(option => {
+          option.classList.toggle('is-selected', option.dataset.severity === currentSettings.notifications.severityThreshold);
+        });
+
+        // Quiet hours
+        elements.quietHoursToggle.classList.toggle('is-active', currentSettings.notifications.quietHours.enabled);
+        elements.quietHoursInputs.style.display = currentSettings.notifications.quietHours.enabled ? 'flex' : 'none';
+
+        // Notification methods
+        elements.notificationMethods.forEach(method => {
+          method.classList.toggle('is-selected', 
+            currentSettings.notifications.methods.includes(method.dataset.method));
+        });
+
+        // Refresh rate
+        elements.refreshOptions.forEach(option => {
+          option.classList.toggle('is-selected', option.dataset.refresh === currentSettings.refreshRate);
+        });
+
+        // Privacy settings
+        elements.dataCollectionToggle.classList.toggle('is-active', currentSettings.privacy.dataCollection);
+        elements.locationToggle.classList.toggle('is-active', currentSettings.privacy.locationServices);
+        elements.analyticsToggle.classList.toggle('is-active', currentSettings.privacy.analyticsOptOut);
+      }
+
+      // Setup event listeners
+      function setupEventListeners() {
+        // Bandwidth mode selection
+        elements.bandwidthCards.forEach(card => {
+          card.addEventListener('click', () => {
+            currentSettings.bandwidthMode = card.dataset.mode;
+            currentSettings.autoDetectBandwidth = false;
+            updateUI();
+          });
+        });
+
+        // Auto-detect toggle
+        elements.autoDetectToggle.addEventListener('click', () => {
+          currentSettings.autoDetectBandwidth = !currentSettings.autoDetectBandwidth;
+          if (currentSettings.autoDetectBandwidth) {
+            detectBandwidth();
+          }
+          updateUI();
+        });
+
+        // Map mode selection
+        elements.mapModeOptions.forEach(option => {
+          option.addEventListener('click', () => {
+            currentSettings.mapMode = option.dataset.mapMode;
+            updateUI();
+          });
+        });
+
+        // Animation preference selection
+        elements.animationOptions.forEach(option => {
+          option.addEventListener('click', () => {
+            currentSettings.animationPreference = option.dataset.animation;
+            updateUI();
+          });
+        });
+
+        // Custom animation toggles
+        elements.customAnimationToggles.forEach(toggle => {
+          toggle.addEventListener('click', () => {
+            const key = toggle.dataset.custom.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+            currentSettings.customAnimations[key] = !currentSettings.customAnimations[key];
+            updateUI();
+          });
+        });
+
+        // Theme selection
+        elements.themeOptions.forEach(option => {
+          option.addEventListener('click', () => {
+            currentSettings.theme = option.dataset.theme;
+            applyTheme(currentSettings.theme);
+            updateUI();
+          });
+        });
+
+        // Accent color selection
+        elements.accentColors.forEach(color => {
+          color.addEventListener('click', () => {
+            currentSettings.accentColor = color.dataset.color;
+            applyAccentColor(currentSettings.accentColor);
+            updateUI();
+          });
+        });
+
+        // Notifications toggle
+        elements.notificationsToggle.addEventListener('click', () => {
+          currentSettings.notifications.enabled = !currentSettings.notifications.enabled;
+          if (currentSettings.notifications.enabled) {
+            requestNotificationPermission();
+          }
+          updateUI();
+        });
+
+        // Severity selection
+        elements.severityOptions.forEach(option => {
+          option.addEventListener('click', () => {
+            currentSettings.notifications.severityThreshold = option.dataset.severity;
+            updateUI();
+          });
+        });
+
+        // Quiet hours toggle
+        elements.quietHoursToggle.addEventListener('click', () => {
+          currentSettings.notifications.quietHours.enabled = !currentSettings.notifications.quietHours.enabled;
+          updateUI();
+        });
+
+        // Notification methods
+        elements.notificationMethods.forEach(method => {
+          method.addEventListener('click', () => {
+            const methodName = method.dataset.method;
+            const index = currentSettings.notifications.methods.indexOf(methodName);
+            if (index > -1) {
+              currentSettings.notifications.methods.splice(index, 1);
+            } else {
+              currentSettings.notifications.methods.push(methodName);
+            }
+            updateUI();
+          });
+        });
+
+        // Refresh rate selection
+        elements.refreshOptions.forEach(option => {
+          option.addEventListener('click', () => {
+            currentSettings.refreshRate = option.dataset.refresh;
+            updateUI();
+          });
+        });
+
+        // Privacy toggles
+        elements.dataCollectionToggle.addEventListener('click', () => {
+          currentSettings.privacy.dataCollection = !currentSettings.privacy.dataCollection;
+          updateUI();
+        });
+
+        elements.locationToggle.addEventListener('click', () => {
+          currentSettings.privacy.locationServices = !currentSettings.privacy.locationServices;
+          if (currentSettings.privacy.locationServices) {
+            requestLocationPermission();
+          }
+          updateUI();
+        });
+
+        elements.analyticsToggle.addEventListener('click', () => {
+          currentSettings.privacy.analyticsOptOut = !currentSettings.privacy.analyticsOptOut;
+          updateUI();
+        });
+
+        // Settings navigation
+        elements.settingsNavItems.forEach(item => {
+          item.addEventListener('click', () => {
+            const target = item.dataset.target;
+            
+            // Update nav items
+            elements.settingsNavItems.forEach(nav => nav.classList.remove('is-active'));
+            item.classList.add('is-active');
+            
+            // Update panels
+            elements.settingsPanels.forEach(panel => panel.classList.remove('is-active'));
+            document.getElementById(target + '-panel').classList.add('is-active');
+          });
+        });
+
+        // Save buttons
+        elements.saveButtons.forEach(btn => {
+          btn.addEventListener('click', saveSettings);
+        });
+
+        // Reset buttons
+        elements.resetButtons.forEach(btn => {
+          btn.addEventListener('click', () => {
+            showConfirmModal(
+              'Reset Settings',
+              'Are you sure you want to reset all settings to their default values?',
+              'This action cannot be undone.',
+              resetSettings
+            );
+          });
+        });
+
+        // Clear data button
+        document.getElementById('clear-data-btn').addEventListener('click', () => {
+          showConfirmModal(
+            'Clear Local Data',
+            'Are you sure you want to clear all locally stored data?',
+            'This will remove all saved settings, preferences, and cached data.',
+            () => {
+              localStorage.clear();
+              resetSettings();
+              if (window.GeoForecast && window.GeoForecast.notify) {
+                window.GeoForecast.notify.success('All local data has been cleared.', 'Data Cleared');
+              }
+            }
+          );
+        });
+
+        // Export data button
+        document.getElementById('export-data-btn').addEventListener('click', exportUserData);
+
+        // Confirm modal
+        elements.confirmModalCancel.addEventListener('click', hideConfirmModal);
+        elements.confirmModalClose.addEventListener('click', hideConfirmModal);
+        elements.confirmModalBackdrop.addEventListener('click', hideConfirmModal);
+      }
+
+      // Detect bandwidth using Network Information API
+      function detectBandwidth() {
+        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        
+        if (connection) {
+          const effectiveType = connection.effectiveType;
+          const saveData = connection.saveData;
+          
+          if (saveData || effectiveType === '2g' || effectiveType === 'slow-2g') {
+            currentSettings.bandwidthMode = 'low';
+          } else if (effectiveType === '3g') {
+            currentSettings.bandwidthMode = 'medium';
+          } else {
+            currentSettings.bandwidthMode = 'high';
+          }
+          
+          if (window.GeoForecast && window.GeoForecast.notify) {
+            window.GeoForecast.notify.info(
+              `Bandwidth detected: ${currentSettings.bandwidthMode} mode activated.`,
+              'Auto-Detection'
+            );
+          }
+        }
+      }
+
+      // Apply theme
+      function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        if (theme === 'dark') {
+          document.body.classList.add('theme-dark');
+        } else if (theme === 'light') {
+          document.body.classList.remove('theme-dark');
+        } else {
+          // System preference
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (prefersDark) {
+            document.body.classList.add('theme-dark');
+          } else {
+            document.body.classList.remove('theme-dark');
+          }
+        }
+      }
+
+      // Apply accent color
+      function applyAccentColor(color) {
+        document.documentElement.style.setProperty('--color-secondary', color);
+      }
+
+      // Request notification permission
+      function requestNotificationPermission() {
+        if ('Notification' in window) {
+          Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+              if (window.GeoForecast && window.GeoForecast.notify) {
+                window.GeoForecast.notify.success('Notifications enabled successfully.', 'Success');
+              }
+            } else {
+              currentSettings.notifications.enabled = false;
+              updateUI();
+              if (window.GeoForecast && window.GeoForecast.notify) {
+                window.GeoForecast.notify.warning('Notification permission was denied.', 'Permission Denied');
+              }
+            }
+          });
+        }
+      }
+
+      // Request location permission
+      function requestLocationPermission() {
+        if ('geolocation' in navigator) {
+          navigator.geolocation.getCurrentPosition(
+            () => {
+              if (window.GeoForecast && window.GeoForecast.notify) {
+                window.GeoForecast.notify.success('Location access granted.', 'Location Enabled');
+              }
+            },
+            () => {
+              currentSettings.privacy.locationServices = false;
+              updateUI();
+              if (window.GeoForecast && window.GeoForecast.notify) {
+                window.GeoForecast.notify.warning('Location permission was denied.', 'Permission Denied');
+              }
+            }
+          );
+        }
+      }
+
+      // Export user data
+      function exportUserData() {
+        const data = {
+          settings: currentSettings,
+          timestamp: new Date().toISOString(),
+          version: '1.0.0'
+        };
+        
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `geoforecast-data-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        if (window.GeoForecast && window.GeoForecast.notify) {
+          window.GeoForecast.notify.success('Your data has been exported successfully.', 'Export Complete');
+        }
+      }
+
+      // Show confirmation modal
+      let confirmCallback = null;
+      
+      function showConfirmModal(title, text, warning, callback) {
+        elements.confirmModalTitle.textContent = title;
+        elements.confirmModalText.textContent = text;
+        
+        if (warning) {
+          elements.confirmModalWarning.style.display = 'block';
+          elements.confirmModalWarningText.textContent = warning;
+        } else {
+          elements.confirmModalWarning.style.display = 'none';
+        }
+        
+        confirmCallback = callback;
+        elements.confirmModal.classList.add('is-open');
+        elements.confirmModalBackdrop.classList.add('is-open');
+        
+        elements.confirmModalConfirm.onclick = () => {
+          hideConfirmModal();
+          if (confirmCallback) confirmCallback();
+        };
+      }
+
+      // Hide confirmation modal
+      function hideConfirmModal() {
+        elements.confirmModal.classList.remove('is-open');
+        elements.confirmModalBackdrop.classList.remove('is-open');
+        confirmCallback = null;
+      }
+
+      // Initialize on DOM ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+    })();
+  </script>
+</body>
+</html>

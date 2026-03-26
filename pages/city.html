@@ -1,0 +1,2004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>City Detail | Geopolitical Forecast Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1E3A5F;
+      --primary-light: #2D4A6F;
+      --primary-dark: #152A45;
+      --secondary: #7C3AED;
+      --secondary-light: #9F67F2;
+      --secondary-dark: #5B21B6;
+      --bg-main: #F5F5DC;
+      --bg-alt: #F0F4F8;
+      --bg-dark: #1A1A2E;
+      --card-bg: #FFFFFF;
+      --card-bg-alt: #FAFAFA;
+      --text-primary: #1A1A1A;
+      --text-secondary: #4A5568;
+      --text-muted: #718096;
+      --text-light: #FFFFFF;
+      --alert-critical: #DC2626;
+      --alert-high: #F97316;
+      --alert-medium: #EAB308;
+      --alert-low: #22C55E;
+      --alert-info: #3B82F6;
+      --accent-gold: #FFD700;
+      --accent-coral: #E85D4E;
+      --accent-teal: #14B8A6;
+      --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+      --ease-out: cubic-bezier(0, 0, 0.2, 1);
+      --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    
+    .font-mono {
+      font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    }
+    
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-primary);
+    }
+    
+    /* Header Styles */
+    .header {
+      height: 72px;
+      background: var(--card-bg);
+      border-bottom: 1px solid #E2E8F0;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+    }
+    
+    /* Sidebar Styles */
+    .sidebar {
+      width: 280px;
+      background: var(--card-bg);
+      border-right: 1px solid #E2E8F0;
+      position: fixed;
+      left: 0;
+      top: 72px;
+      bottom: 0;
+      z-index: 90;
+      overflow-y: auto;
+    }
+    
+    .sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      margin: 4px 12px;
+      border-radius: 8px;
+      color: var(--text-secondary);
+      transition: all 150ms var(--ease-default);
+      cursor: pointer;
+    }
+    
+    .sidebar-item:hover {
+      background: #F8FAFC;
+      color: var(--text-primary);
+    }
+    
+    .sidebar-item.active {
+      background: #F0F4F8;
+      color: var(--primary);
+      border-left: 3px solid var(--secondary);
+      margin-left: 9px;
+    }
+    
+    /* Main Content */
+    .main-content {
+      margin-left: 280px;
+      margin-top: 72px;
+      padding: 32px;
+      min-height: calc(100vh - 72px);
+    }
+    
+    /* Card Styles */
+    .card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+      transition: all 300ms var(--ease-default);
+    }
+    
+    .card:hover {
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+      transform: translateY(-2px);
+    }
+    
+    /* Circular Progress */
+    .circular-progress {
+      position: relative;
+      width: 120px;
+      height: 120px;
+    }
+    
+    .circular-progress svg {
+      transform: rotate(-90deg);
+    }
+    
+    .circular-progress .track {
+      fill: none;
+      stroke: #E2E8F0;
+      stroke-width: 8;
+    }
+    
+    .circular-progress .fill {
+      fill: none;
+      stroke-width: 8;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 1000ms var(--ease-out);
+    }
+    
+    .circular-progress .value {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 28px;
+      font-weight: 700;
+    }
+    
+    /* Gauge Styles */
+    .gauge-container {
+      position: relative;
+      width: 160px;
+      height: 80px;
+    }
+    
+    .gauge-bg {
+      fill: none;
+      stroke: #E2E8F0;
+      stroke-width: 12;
+    }
+    
+    .gauge-fill {
+      fill: none;
+      stroke-width: 12;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 800ms var(--ease-out);
+    }
+    
+    /* Alert Badges */
+    .alert-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    
+    .alert-badge.critical {
+      background: rgba(220, 38, 38, 0.1);
+      color: var(--alert-critical);
+    }
+    
+    .alert-badge.high {
+      background: rgba(249, 115, 22, 0.1);
+      color: var(--alert-high);
+    }
+    
+    .alert-badge.medium {
+      background: rgba(234, 179, 8, 0.1);
+      color: var(--alert-medium);
+    }
+    
+    .alert-badge.low {
+      background: rgba(34, 197, 94, 0.1);
+      color: var(--alert-low);
+    }
+    
+    /* Button Styles */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 500;
+      transition: all 150ms var(--ease-default);
+      cursor: pointer;
+      border: none;
+    }
+    
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: var(--primary-light);
+      transform: translateY(-1px);
+    }
+    
+    .btn-secondary {
+      background: transparent;
+      color: var(--primary);
+      border: 1px solid var(--primary);
+    }
+    
+    .btn-secondary:hover {
+      background: #F0F4F8;
+    }
+    
+    /* Metric Card */
+    .metric-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+      transition: all 300ms var(--ease-default);
+    }
+    
+    .metric-card:hover {
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+      transform: translateY(-2px);
+    }
+    
+    .metric-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    /* Animations */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    @keyframes countUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .animate-pulse {
+      animation: pulse 2s ease-in-out infinite;
+    }
+    
+    .animate-slide-in {
+      animation: slideIn 500ms var(--ease-out) forwards;
+    }
+    
+    .animate-fade-in {
+      animation: fadeIn 300ms var(--ease-default) forwards;
+    }
+    
+    .stagger-1 { animation-delay: 50ms; }
+    .stagger-2 { animation-delay: 100ms; }
+    .stagger-3 { animation-delay: 150ms; }
+    .stagger-4 { animation-delay: 200ms; }
+    .stagger-5 { animation-delay: 250ms; }
+    .stagger-6 { animation-delay: 300ms; }
+    
+    /* Live Indicator */
+    .live-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--alert-low);
+      border-radius: 50%;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    
+    /* Tab Styles */
+    .tab-btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: all 150ms var(--ease-default);
+      cursor: pointer;
+      border: none;
+      background: transparent;
+    }
+    
+    .tab-btn:hover {
+      background: #F0F4F8;
+      color: var(--text-primary);
+    }
+    
+    .tab-btn.active {
+      background: var(--primary);
+      color: white;
+    }
+    
+    /* Action Item */
+    .action-item {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 16px;
+      border-left: 4px solid transparent;
+      transition: all 200ms var(--ease-default);
+      cursor: pointer;
+    }
+    
+    .action-item:hover {
+      background: var(--card-bg-alt);
+      transform: translateX(4px);
+    }
+    
+    .action-item.critical {
+      border-left-color: var(--alert-critical);
+    }
+    
+    .action-item.high {
+      border-left-color: var(--alert-high);
+    }
+    
+    .action-item.medium {
+      border-left-color: var(--alert-medium);
+    }
+    
+    .action-item.low {
+      border-left-color: var(--alert-low);
+    }
+    
+    /* Progress Bar */
+    .progress-bar {
+      height: 8px;
+      background: #E2E8F0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 800ms var(--ease-out);
+    }
+    
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .sidebar {
+        transform: translateX(-100%);
+        transition: transform 300ms var(--ease-default);
+      }
+      
+      .sidebar.open {
+        transform: translateX(0);
+      }
+      
+      .main-content {
+        margin-left: 0;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .main-content {
+        padding: 16px;
+      }
+    }
+    
+    /* Reduced Motion */
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header flex items-center justify-between px-8">
+    <div class="flex items-center gap-4">
+      <button id="menuToggle" class="lg:hidden p-2 rounded-lg hover:bg-gray-100">
+        <i data-lucide="menu" class="w-6 h-6"></i>
+      </button>
+      <a href="index.html" class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1E3A5F] to-[#7C3AED] flex items-center justify-center">
+          <i data-lucide="globe" class="w-6 h-6 text-white"></i>
+        </div>
+        <span class="font-semibold text-lg text-[#1A1A1A]">GeoForecast</span>
+      </a>
+    </div>
+    
+    <div class="hidden md:flex items-center gap-3 px-4 py-2 rounded-full bg-gradient-to-r from-red-500/10 to-orange-500/10 border border-red-200">
+      <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+      <span class="text-sm font-medium text-red-700">Global Threat Level: HIGH</span>
+    </div>
+    
+    <div class="flex items-center gap-4">
+      <a href="alerts.html" class="relative p-2 rounded-lg hover:bg-gray-100 transition-colors">
+        <i data-lucide="bell" class="w-5 h-5 text-gray-600"></i>
+        <span class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">5</span>
+      </a>
+      <a href="settings.html" class="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+        <i data-lucide="settings" class="w-5 h-5 text-gray-600"></i>
+      </a>
+      <div class="w-9 h-9 rounded-full bg-gradient-to-br from-[#1E3A5F] to-[#7C3AED] flex items-center justify-center cursor-pointer">
+        <i data-lucide="user" class="w-5 h-5 text-white"></i>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <nav class="py-6">
+      <div class="px-4 mb-4">
+        <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Navigation</span>
+      </div>
+      <a href="index.html" class="sidebar-item">
+        <i data-lucide="globe" class="w-5 h-5"></i>
+        <span>Global Overview</span>
+      </a>
+      <a href="predictions.html" class="sidebar-item">
+        <i data-lucide="brain" class="w-5 h-5"></i>
+        <span>Predictions</span>
+      </a>
+      <a href="timeline.html" class="sidebar-item">
+        <i data-lucide="calendar" class="w-5 h-5"></i>
+        <span>Timeline</span>
+      </a>
+      <a href="alerts.html" class="sidebar-item">
+        <i data-lucide="bell" class="w-5 h-5"></i>
+        <span>Alert Center</span>
+        <span class="ml-auto px-2 py-0.5 rounded-full bg-red-500 text-white text-xs">5</span>
+      </a>
+      
+      <div class="px-4 mt-8 mb-4">
+        <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Settings</span>
+      </div>
+      <a href="settings.html" class="sidebar-item">
+        <i data-lucide="settings" class="w-5 h-5"></i>
+        <span>Settings</span>
+      </a>
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Breadcrumb -->
+    <nav class="flex items-center gap-2 text-sm text-gray-500 mb-6 animate-fade-in">
+      <a href="index.html" class="hover:text-[#1E3A5F] transition-colors">Global Overview</a>
+      <i data-lucide="chevron-right" class="w-4 h-4"></i>
+      <a href="country.html" class="hover:text-[#1E3A5F] transition-colors" id="countryBreadcrumb">United States</a>
+      <i data-lucide="chevron-right" class="w-4 h-4"></i>
+      <span class="text-[#1E3A5F] font-medium" id="cityBreadcrumb">New York City</span>
+    </nav>
+
+    <!-- Section 1: City Header -->
+    <section class="mb-8 animate-slide-in">
+      <div class="card relative overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-r from-[#1E3A5F]/5 to-[#7C3AED]/5"></div>
+        <div class="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          <div class="flex items-start gap-6">
+            <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#1E3A5F] to-[#7C3AED] flex items-center justify-center shadow-lg">
+              <i data-lucide="building-2" class="w-10 h-10 text-white"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-3 mb-2">
+                <h1 class="text-3xl font-bold text-[#1A1A1A]" id="cityName">New York City</h1>
+                <span class="px-3 py-1 rounded-full bg-[#1E3A5F]/10 text-[#1E3A5F] text-sm font-medium" id="countryCode">US</span>
+              </div>
+              <div class="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+                <span class="flex items-center gap-1">
+                  <i data-lucide="map-pin" class="w-4 h-4"></i>
+                  <span id="coordinates" class="font-mono">40.7128° N, 74.0060° W</span>
+                </span>
+                <span class="flex items-center gap-1">
+                  <i data-lucide="clock" class="w-4 h-4"></i>
+                  <span id="localTime">--:--</span>
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="flex flex-wrap items-center gap-6">
+            <!-- Weather Widget -->
+            <div class="flex items-center gap-4 px-5 py-3 rounded-xl bg-white/80 backdrop-blur-sm border border-gray-100">
+              <i data-lucide="cloud-sun" class="w-10 h-10 text-amber-500"></i>
+              <div>
+                <div class="text-2xl font-bold text-[#1A1A1A]">72°F</div>
+                <div class="text-sm text-gray-500">Partly Cloudy</div>
+              </div>
+            </div>
+            
+            <!-- Threat Score -->
+            <div class="flex items-center gap-4">
+              <div class="circular-progress" id="threatScoreContainer">
+                <svg width="120" height="120" viewBox="0 0 120 120">
+                  <circle class="track" cx="60" cy="60" r="52"></circle>
+                  <circle class="fill" id="threatScoreCircle" cx="60" cy="60" r="52" 
+                    stroke="#F97316" stroke-dasharray="326.73" stroke-dashoffset="98.02"></circle>
+                </svg>
+                <div class="value text-[#F97316]" id="threatScoreValue">70</div>
+              </div>
+              <div>
+                <div class="text-sm text-gray-500">Threat Score</div>
+                <div class="alert-badge high mt-1">
+                  <i data-lucide="alert-triangle" class="w-3 h-3"></i>
+                  High Risk
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="relative flex flex-wrap items-center gap-3 mt-6 pt-6 border-t border-gray-100">
+          <button class="btn btn-secondary" onclick="history.back()">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            Back to Country
+          </button>
+          <button class="btn btn-secondary" onclick="shareCityReport()">
+            <i data-lucide="share-2" class="w-4 h-4"></i>
+            Share Report
+          </button>
+          <button class="btn btn-secondary" onclick="exportCityData()">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            Export Data
+          </button>
+          <button class="btn btn-primary" onclick="toggleAlertSubscription()">
+            <i data-lucide="bell-plus" class="w-4 h-4"></i>
+            <span id="subscribeText">Subscribe to Alerts</span>
+          </button>
+          <div class="ml-auto flex items-center gap-2 text-sm text-gray-500">
+            <span class="live-dot"></span>
+            <span>Last updated: <span id="lastUpdated">Just now</span></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Real-Time Metrics Dashboard -->
+    <section class="mb-8">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold text-[#1A1A1A]">Real-Time Metrics</h2>
+        <div class="flex items-center gap-3">
+          <div class="live-indicator text-sm text-gray-500">
+            <span class="live-dot"></span>
+            <span>Live Data</span>
+          </div>
+          <button class="p-2 rounded-lg hover:bg-gray-100 transition-colors" onclick="refreshMetrics()" title="Refresh Data">
+            <i data-lucide="refresh-cw" class="w-4 h-4 text-gray-600" id="refreshIcon"></i>
+          </button>
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Crime Rate -->
+        <div class="metric-card animate-slide-in stagger-1">
+          <div class="flex items-start justify-between mb-4">
+            <div class="metric-icon bg-red-100">
+              <i data-lucide="shield-alert" class="w-6 h-6 text-red-600"></i>
+            </div>
+            <span class="flex items-center gap-1 text-sm text-red-600">
+              <i data-lucide="trending-up" class="w-4 h-4"></i>
+              +5.2%
+            </span>
+          </div>
+          <div class="text-sm text-gray-500 uppercase tracking-wide mb-1">Crime Index</div>
+          <div class="text-3xl font-bold text-[#1A1A1A] mb-2" id="crimeIndex">68.4</div>
+          <div class="progress-bar">
+            <div class="progress-fill bg-red-500" style="width: 68.4%"></div>
+          </div>
+        </div>
+        
+        <!-- Health Index -->
+        <div class="metric-card animate-slide-in stagger-2">
+          <div class="flex items-start justify-between mb-4">
+            <div class="metric-icon bg-emerald-100">
+              <i data-lucide="heart-pulse" class="w-6 h-6 text-emerald-600"></i>
+            </div>
+            <span class="flex items-center gap-1 text-sm text-emerald-600">
+              <i data-lucide="trending-down" class="w-4 h-4"></i>
+              -2.1%
+            </span>
+          </div>
+          <div class="text-sm text-gray-500 uppercase tracking-wide mb-1">Health Index</div>
+          <div class="text-3xl font-bold text-[#1A1A1A] mb-2" id="healthIndex">82.7</div>
+          <div class="progress-bar">
+            <div class="progress-fill bg-emerald-500" style="width: 82.7%"></div>
+          </div>
+        </div>
+        
+        <!-- Economic Index -->
+        <div class="metric-card animate-slide-in stagger-3">
+          <div class="flex items-start justify-between mb-4">
+            <div class="metric-icon bg-amber-100">
+              <i data-lucide="trending-up" class="w-6 h-6 text-amber-600"></i>
+            </div>
+            <span class="flex items-center gap-1 text-sm text-amber-600">
+              <i data-lucide="trending-up" class="w-4 h-4"></i>
+              +1.8%
+            </span>
+          </div>
+          <div class="text-sm text-gray-500 uppercase tracking-wide mb-1">Economic Index</div>
+          <div class="text-3xl font-bold text-[#1A1A1A] mb-2" id="economicIndex">74.2</div>
+          <div class="progress-bar">
+            <div class="progress-fill bg-amber-500" style="width: 74.2%"></div>
+          </div>
+        </div>
+        
+        <!-- Air Quality -->
+        <div class="metric-card animate-slide-in stagger-4">
+          <div class="flex items-start justify-between mb-4">
+            <div class="metric-icon bg-blue-100">
+              <i data-lucide="wind" class="w-6 h-6 text-blue-600"></i>
+            </div>
+            <span class="flex items-center gap-1 text-sm text-emerald-600">
+              <i data-lucide="trending-down" class="w-4 h-4"></i>
+              -8.3%
+            </span>
+          </div>
+          <div class="text-sm text-gray-500 uppercase tracking-wide mb-1">Air Quality Index</div>
+          <div class="text-3xl font-bold text-[#1A1A1A] mb-2" id="aqi">45</div>
+          <div class="flex items-center gap-2">
+            <div class="progress-bar flex-1">
+              <div class="progress-fill bg-emerald-500" style="width: 45%"></div>
+            </div>
+            <span class="text-sm text-emerald-600 font-medium">Good</span>
+          </div>
+        </div>
+        
+        <!-- Unemployment -->
+        <div class="metric-card animate-slide-in stagger-5">
+          <div class="flex items-start justify-between mb-4">
+            <div class="metric-icon bg-purple-100">
+              <i data-lucide="briefcase" class="w-6 h-6 text-purple-600"></i>
+            </div>
+            <span class="flex items-center gap-1 text-sm text-emerald-600">
+              <i data-lucide="trending-down" class="w-4 h-4"></i>
+              -0.4%
+            </span>
+          </div>
+          <div class="text-sm text-gray-500 uppercase tracking-wide mb-1">Unemployment Rate</div>
+          <div class="text-3xl font-bold text-[#1A1A1A] mb-2" id="unemployment">4.2%</div>
+          <div class="progress-bar">
+            <div class="progress-fill bg-purple-500" style="width: 42%"></div>
+          </div>
+        </div>
+        
+        <!-- Infrastructure -->
+        <div class="metric-card animate-slide-in stagger-6">
+          <div class="flex items-start justify-between mb-4">
+            <div class="metric-icon bg-orange-100">
+              <i data-lucide="building" class="w-6 h-6 text-orange-600"></i>
+            </div>
+            <span class="flex items-center gap-1 text-sm text-red-600">
+              <i data-lucide="trending-up" class="w-4 h-4"></i>
+              +3.7%
+            </span>
+          </div>
+          <div class="text-sm text-gray-500 uppercase tracking-wide mb-1">Infrastructure Status</div>
+          <div class="text-3xl font-bold text-[#1A1A1A] mb-2" id="infrastructure">71.5</div>
+          <div class="progress-bar">
+            <div class="progress-fill bg-orange-500" style="width: 71.5%"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3-5: Crime, Health, Economic Panels -->
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <!-- Crime Index Panel -->
+      <div class="card animate-slide-in">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
+              <i data-lucide="shield-alert" class="w-5 h-5 text-red-600"></i>
+            </div>
+            <div>
+              <h3 class="font-semibold text-[#1A1A1A]">Crime Index</h3>
+              <p class="text-sm text-gray-500">Current: <span class="font-mono font-medium text-red-600">68.4</span></p>
+            </div>
+          </div>
+          <div class="flex bg-gray-100 rounded-lg p-1">
+            <button class="tab-btn active text-xs py-1 px-3" data-period="7d" data-chart="crime">7D</button>
+            <button class="tab-btn text-xs py-1 px-3" data-period="30d" data-chart="crime">30D</button>
+            <button class="tab-btn text-xs py-1 px-3" data-period="1y" data-chart="crime">1Y</button>
+          </div>
+        </div>
+        
+        <div class="h-48 mb-4">
+          <canvas id="crimeChart"></canvas>
+        </div>
+        
+        <div class="border-t border-gray-100 pt-4">
+          <h4 class="text-sm font-medium text-gray-700 mb-3">Crime Type Breakdown</h4>
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">Violent Crime</span>
+              <div class="flex items-center gap-3">
+                <div class="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div class="h-full bg-red-500 rounded-full" style="width: 35%"></div>
+                </div>
+                <span class="text-sm font-medium w-10 text-right">35%</span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">Property Crime</span>
+              <div class="flex items-center gap-3">
+                <div class="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div class="h-full bg-orange-500 rounded-full" style="width: 42%"></div>
+                </div>
+                <span class="text-sm font-medium w-10 text-right">42%</span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">White Collar</span>
+              <div class="flex items-center gap-3">
+                <div class="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div class="h-full bg-yellow-500 rounded-full" style="width: 15%"></div>
+                </div>
+                <span class="text-sm font-medium w-10 text-right">15%</span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">Other</span>
+              <div class="flex items-center gap-3">
+                <div class="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div class="h-full bg-gray-400 rounded-full" style="width: 8%"></div>
+                </div>
+                <span class="text-sm font-medium w-10 text-right">8%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mt-4 p-3 rounded-lg bg-red-50 border border-red-100">
+          <div class="flex items-start gap-2">
+            <i data-lucide="alert-circle" class="w-4 h-4 text-red-600 mt-0.5"></i>
+            <div>
+              <p class="text-sm font-medium text-red-800">Safety Recommendation</p>
+              <p class="text-xs text-red-600 mt-1">Avoid traveling alone after 11 PM in high-crime districts. Stay alert in tourist areas.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Health Index Panel -->
+      <div class="card animate-slide-in" style="animation-delay: 100ms;">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+              <i data-lucide="heart-pulse" class="w-5 h-5 text-emerald-600"></i>
+            </div>
+            <div>
+              <h3 class="font-semibold text-[#1A1A1A]">Health Index</h3>
+              <p class="text-sm text-gray-500">Current: <span class="font-mono font-medium text-emerald-600">82.7</span></p>
+            </div>
+          </div>
+          <div class="flex bg-gray-100 rounded-lg p-1">
+            <button class="tab-btn active text-xs py-1 px-3" data-period="7d" data-chart="health">7D</button>
+            <button class="tab-btn text-xs py-1 px-3" data-period="30d" data-chart="health">30D</button>
+            <button class="tab-btn text-xs py-1 px-3" data-period="1y" data-chart="health">1Y</button>
+          </div>
+        </div>
+        
+        <div class="h-48 mb-4">
+          <canvas id="healthChart"></canvas>
+        </div>
+        
+        <!-- Disease Alerts -->
+        <div class="border-t border-gray-100 pt-4">
+          <h4 class="text-sm font-medium text-gray-700 mb-3">Active Health Alerts</h4>
+          <div class="space-y-3">
+            <div class="flex items-center gap-3 p-3 rounded-lg bg-yellow-50 border border-yellow-100">
+              <i data-lucide="alert-triangle" class="w-5 h-5 text-yellow-600"></i>
+              <div class="flex-1">
+                <p class="text-sm font-medium text-yellow-800">Flu Season Peak</p>
+                <p class="text-xs text-yellow-600">Influenza cases rising. Vaccination recommended.</p>
+              </div>
+              <span class="alert-badge medium">Medium</span>
+            </div>
+            <div class="flex items-center gap-3 p-3 rounded-lg bg-emerald-50 border border-emerald-100">
+              <i data-lucide="check-circle" class="w-5 h-5 text-emerald-600"></i>
+              <div class="flex-1">
+                <p class="text-sm font-medium text-emerald-800">COVID-19 Stable</p>
+                <p class="text-xs text-emerald-600">Low transmission rates. Normal precautions.</p>
+              </div>
+              <span class="alert-badge low">Low</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Healthcare Capacity -->
+        <div class="mt-4">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-sm text-gray-600">Healthcare Capacity</span>
+            <span class="text-sm font-medium text-emerald-600">78% Available</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill bg-emerald-500" style="width: 78%"></div>
+          </div>
+        </div>
+        
+        <div class="mt-4 p-3 rounded-lg bg-emerald-50 border border-emerald-100">
+          <div class="flex items-start gap-2">
+            <i data-lucide="info" class="w-4 h-4 text-emerald-600 mt-0.5"></i>
+            <div>
+              <p class="text-sm font-medium text-emerald-800">Health Recommendation</p>
+              <p class="text-xs text-emerald-600 mt-1">Air quality is good. No special precautions needed for outdoor activities.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Economic Indicators Panel -->
+      <div class="card animate-slide-in" style="animation-delay: 150ms;">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
+              <i data-lucide="trending-up" class="w-5 h-5 text-amber-600"></i>
+            </div>
+            <div>
+              <h3 class="font-semibold text-[#1A1A1A]">Economic Indicators</h3>
+              <p class="text-sm text-gray-500">Index: <span class="font-mono font-medium text-amber-600">74.2</span></p>
+            </div>
+          </div>
+          <div class="flex bg-gray-100 rounded-lg p-1">
+            <button class="tab-btn active text-xs py-1 px-3" data-period="7d" data-chart="economic">7D</button>
+            <button class="tab-btn text-xs py-1 px-3" data-period="30d" data-chart="economic">30D</button>
+            <button class="tab-btn text-xs py-1 px-3" data-period="1y" data-chart="economic">1Y</button>
+          </div>
+        </div>
+        
+        <div class="h-48 mb-4">
+          <canvas id="economicChart"></canvas>
+        </div>
+        
+        <div class="border-t border-gray-100 pt-4">
+          <h4 class="text-sm font-medium text-gray-700 mb-3">Key Metrics</h4>
+          <div class="space-y-3">
+            <div class="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+              <div class="flex items-center gap-2">
+                <i data-lucide="dollar-sign" class="w-4 h-4 text-gray-500"></i>
+                <span class="text-sm text-gray-600">Cost of Living</span>
+              </div>
+              <span class="text-sm font-medium">187.2 <span class="text-xs text-gray-400">(vs US avg 100)</span></span>
+            </div>
+            <div class="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+              <div class="flex items-center gap-2">
+                <i data-lucide="home" class="w-4 h-4 text-gray-500"></i>
+                <span class="text-sm text-gray-600">Real Estate Trend</span>
+              </div>
+              <span class="text-sm font-medium text-emerald-600">+3.2% <i data-lucide="trending-up" class="w-3 h-3 inline"></i></span>
+            </div>
+            <div class="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+              <div class="flex items-center gap-2">
+                <i data-lucide="shopping-cart" class="w-4 h-4 text-gray-500"></i>
+                <span class="text-sm text-gray-600">Inflation Rate</span>
+              </div>
+              <span class="text-sm font-medium text-amber-600">3.4%</span>
+            </div>
+            <div class="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+              <div class="flex items-center gap-2">
+                <i data-lucide="building-2" class="w-4 h-4 text-gray-500"></i>
+                <span class="text-sm text-gray-600">Business Sentiment</span>
+              </div>
+              <span class="text-sm font-medium text-emerald-600">Positive</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mt-4 p-3 rounded-lg bg-amber-50 border border-amber-100">
+          <div class="flex items-start gap-2">
+            <i data-lucide="info" class="w-4 h-4 text-amber-600 mt-0.5"></i>
+            <div>
+              <p class="text-sm font-medium text-amber-800">Economic Outlook</p>
+              <p class="text-xs text-amber-600 mt-1">Steady growth expected. Cost of living remains high but stable.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- Section 6: Civil Affairs Status -->
+    <section class="mb-8 animate-slide-in">
+      <div class="card">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-[#1E3A5F]/10 flex items-center justify-center">
+              <i data-lucide="landmark" class="w-5 h-5 text-[#1E3A5F]"></i>
+            </div>
+            <h3 class="font-semibold text-[#1A1A1A]">Civil Affairs Status</h3>
+          </div>
+          <span class="text-sm text-gray-500">Last assessment: 2 hours ago</span>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <!-- Government Stability -->
+          <div class="p-4 rounded-xl bg-gray-50">
+            <div class="flex items-center gap-2 mb-3">
+              <i data-lucide="scale" class="w-5 h-5 text-[#1E3A5F]"></i>
+              <span class="text-sm font-medium text-gray-700">Government Stability</span>
+            </div>
+            <div class="gauge-container mx-auto mb-3">
+              <svg width="160" height="80" viewBox="0 0 160 80">
+                <path class="gauge-bg" d="M 20 80 A 60 60 0 0 1 140 80"></path>
+                <path class="gauge-fill" stroke="#22C55E" stroke-dasharray="188.5" stroke-dashoffset="37.7" 
+                  d="M 20 80 A 60 60 0 0 1 140 80"></path>
+              </svg>
+              <div class="absolute bottom-0 left-1/2 -translate-x-1/2 text-2xl font-bold text-emerald-600">80%</div>
+            </div>
+            <p class="text-xs text-center text-gray-500">Stable governance, no significant unrest</p>
+          </div>
+          
+          <!-- Public Sentiment -->
+          <div class="p-4 rounded-xl bg-gray-50">
+            <div class="flex items-center gap-2 mb-3">
+              <i data-lucide="users" class="w-5 h-5 text-[#1E3A5F]"></i>
+              <span class="text-sm font-medium text-gray-700">Public Sentiment</span>
+            </div>
+            <div class="gauge-container mx-auto mb-3">
+              <svg width="160" height="80" viewBox="0 0 160 80">
+                <path class="gauge-bg" d="M 20 80 A 60 60 0 0 1 140 80"></path>
+                <path class="gauge-fill" stroke="#EAB308" stroke-dasharray="188.5" stroke-dashoffset="75.4" 
+                  d="M 20 80 A 60 60 0 0 1 140 80"></path>
+              </svg>
+              <div class="absolute bottom-0 left-1/2 -translate-x-1/2 text-2xl font-bold text-yellow-600">60%</div>
+            </div>
+            <p class="text-xs text-center text-gray-500">Mixed sentiment, some concerns</p>
+          </div>
+          
+          <!-- Infrastructure -->
+          <div class="p-4 rounded-xl bg-gray-50">
+            <div class="flex items-center gap-2 mb-3">
+              <i data-lucide="hammer" class="w-5 h-5 text-[#1E3A5F]"></i>
+              <span class="text-sm font-medium text-gray-700">Infrastructure</span>
+            </div>
+            <div class="gauge-container mx-auto mb-3">
+              <svg width="160" height="80" viewBox="0 0 160 80">
+                <path class="gauge-bg" d="M 20 80 A 60 60 0 0 1 140 80"></path>
+                <path class="gauge-fill" stroke="#F97316" stroke-dasharray="188.5" stroke-dashoffset="56.55" 
+                  d="M 20 80 A 60 60 0 0 1 140 80"></path>
+              </svg>
+              <div class="absolute bottom-0 left-1/2 -translate-x-1/2 text-2xl font-bold text-orange-600">70%</div>
+            </div>
+            <p class="text-xs text-center text-gray-500">Aging infrastructure, maintenance needed</p>
+          </div>
+          
+          <!-- Emergency Services -->
+          <div class="p-4 rounded-xl bg-gray-50">
+            <div class="flex items-center gap-2 mb-3">
+              <i data-lucide="siren" class="w-5 h-5 text-[#1E3A5F]"></i>
+              <span class="text-sm font-medium text-gray-700">Emergency Response</span>
+            </div>
+            <div class="gauge-container mx-auto mb-3">
+              <svg width="160" height="80" viewBox="0 0 160 80">
+                <path class="gauge-bg" d="M 20 80 A 60 60 0 0 1 140 80"></path>
+                <path class="gauge-fill" stroke="#22C55E" stroke-dasharray="188.5" stroke-dashoffset="28.27" 
+                  d="M 20 80 A 60 60 0 0 1 140 80"></path>
+              </svg>
+              <div class="absolute bottom-0 left-1/2 -translate-x-1/2 text-2xl font-bold text-emerald-600">85%</div>
+            </div>
+            <p class="text-xs text-center text-gray-500">Avg response: 4.2 minutes</p>
+          </div>
+        </div>
+        
+        <!-- Public Services Status -->
+        <div class="mt-6 pt-6 border-t border-gray-100">
+          <h4 class="text-sm font-medium text-gray-700 mb-4">Public Services Availability</h4>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="flex items-center gap-3 p-3 rounded-lg bg-emerald-50 border border-emerald-100">
+              <i data-lucide="check-circle" class="w-5 h-5 text-emerald-600"></i>
+              <div>
+                <p class="text-sm font-medium text-emerald-800">Water Supply</p>
+                <p class="text-xs text-emerald-600">Normal</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 p-3 rounded-lg bg-emerald-50 border border-emerald-100">
+              <i data-lucide="check-circle" class="w-5 h-5 text-emerald-600"></i>
+              <div>
+                <p class="text-sm font-medium text-emerald-800">Power Grid</p>
+                <p class="text-xs text-emerald-600">Stable</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 p-3 rounded-lg bg-yellow-50 border border-yellow-100">
+              <i data-lucide="alert-circle" class="w-5 h-5 text-yellow-600"></i>
+              <div>
+                <p class="text-sm font-medium text-yellow-800">Public Transit</p>
+                <p class="text-xs text-yellow-600">Delays</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 p-3 rounded-lg bg-emerald-50 border border-emerald-100">
+              <i data-lucide="check-circle" class="w-5 h-5 text-emerald-600"></i>
+              <div>
+                <p class="text-sm font-medium text-emerald-800">Internet</p>
+                <p class="text-xs text-emerald-600">Operational</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 7-8: Action Recommendations -->
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <!-- Individual Actions -->
+      <div class="card animate-slide-in">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+              <i data-lucide="user" class="w-5 h-5 text-blue-600"></i>
+            </div>
+            <div>
+              <h3 class="font-semibold text-[#1A1A1A]">Individual Actions</h3>
+              <p class="text-sm text-gray-500">Personal safety recommendations</p>
+            </div>
+          </div>
+          <div class="flex bg-gray-100 rounded-lg p-1">
+            <button class="tab-btn active text-xs py-1 px-3" data-tab="safety">Safety</button>
+            <button class="tab-btn text-xs py-1 px-3" data-tab="health">Health</button>
+            <button class="tab-btn text-xs py-1 px-3" data-tab="travel">Travel</button>
+          </div>
+        </div>
+        
+        <div id="safetyActions" class="space-y-3 action-tab-content">
+          <div class="action-item critical" onclick="toggleAction(this)">
+            <div class="flex items-start gap-3">
+              <input type="checkbox" class="mt-1 w-4 h-4 rounded border-gray-300 text-[#1E3A5F] focus:ring-[#1E3A5F]">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="alert-badge critical text-xs">Critical</span>
+                  <span class="text-sm font-medium text-[#1A1A1A]">Avoid High-Crime Districts at Night</span>
+                </div>
+                <p class="text-sm text-gray-500">Stay away from Bronx and parts of Brooklyn after 10 PM. Use ride-sharing services instead of walking.</p>
+              </div>
+              <i data-lucide="chevron-down" class="w-5 h-5 text-gray-400 transition-transform"></i>
+            </div>
+          </div>
+          
+          <div class="action-item high" onclick="toggleAction(this)">
+            <div class="flex items-start gap-3">
+              <input type="checkbox" class="mt-1 w-4 h-4 rounded border-gray-300 text-[#1E3A5F] focus:ring-[#1E3A5F]">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="alert-badge high text-xs">High</span>
+                  <span class="text-sm font-medium text-[#1A1A1A]">Secure Personal Belongings</span>
+                </div>
+                <p class="text-sm text-gray-500">Keep bags zipped and in front in crowded areas. Be extra vigilant on subway during rush hour.</p>
+              </div>
+              <i data-lucide="chevron-down" class="w-5 h-5 text-gray-400 transition-transform"></i>
+            </div>
+          </div>
+          
+          <div class="action-item medium" onclick="toggleAction(this)">
+            <div class="flex items-start gap-3">
+              <input type="checkbox" class="mt-1 w-4 h-4 rounded border-gray-300 text-[#1E3A5F] focus:ring-[#1E3A5F]">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="alert-badge medium text-xs">Medium</span>
+                  <span class="text-sm font-medium text-[#1A1A1A]">Monitor Local News</span>
+                </div>
+                <p class="text-sm text-gray-500">Stay updated on protests or demonstrations that may affect transportation routes.</p>
+              </div>
+              <i data-lucide="chevron-down" class="w-5 h-5 text-gray-400 transition-transform"></i>
+            </div>
+          </div>
+          
+          <div class="action-item low" onclick="toggleAction(this)">
+            <div class="flex items-start gap-3">
+              <input type="checkbox" class="mt-1 w-4 h-4 rounded border-gray-300 text-[#1E3A5F] focus:ring-[#1E3A5F]">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="alert-badge low text-xs">Low</span>
+                  <span class="text-sm font-medium text-[#1A1A1A]">Save Emergency Contacts</span>
+                </div>
+                <p class="text-sm text-gray-500">Program local emergency numbers: 911, 311 for non-emergency city services.</p>
+              </div>
+              <i data-lucide="chevron-down" class="w-5 h-5 text-gray-400 transition-transform"></i>
+            </div>
+          </div>
+        </div>
+        
+        <div id="healthActions" class="space-y-3 action-tab-content hidden">
+          <div class="action-item medium" onclick="toggleAction(this)">
+            <div class="flex items-start gap-3">
+              <input type="checkbox" class="mt-1 w-4 h-4 rounded border-gray-300 text-[#1E3A5F] focus:ring-[#1E3A5F]">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="alert-badge medium text-xs">Medium</span>
+                  <span class="text-sm font-medium text-[#1A1A1A]">Get Flu Vaccination</span>
+                </div>
+                <p class="text-sm text-gray-500">Flu season is peaking. Vaccination recommended for all residents.</p>
+              </div>
+              <i data-lucide="chevron-down" class="w-5 h-5 text-gray-400 transition-transform"></i>
+            </div>
+          </div>
+          
+          <div class="action-item low" onclick="toggleAction(this)">
+            <div class="flex items-start gap-3">
+              <input type="checkbox" class="mt-1 w-4 h-4 rounded border-gray-300 text-[#1E3A5F] focus:ring-[#1E3A5F]">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="alert-badge low text-xs">Low</span>
+                  <span class="text-sm font-medium text-[#1A1A1A]">Carry Hand Sanitizer</span>
+                </div>
+                <p class="text-sm text-gray-500">Good practice in public transportation and crowded areas.</p>
+              </div>
+              <i data-lucide="chevron-down" class="w-5 h-5 text-gray-400 transition-transform"></i>
+            </div>
+          </div>
+        </div>
+        
+        <div id="travelActions" class="space-y-3 action-tab-content hidden">
+          <div class="action-item high" onclick="toggleAction(this)">
+            <div class="flex items-start gap-3">
+              <input type="checkbox" class="mt-1 w-4 h-4 rounded border-gray-300 text-[#1E3A5F] focus:ring-[#1E3A5F]">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="alert-badge high text-xs">High</span>
+                  <span class="text-sm font-medium text-[#1A1A1A]">Allow Extra Transit Time</span>
+                </div>
+                <p class="text-sm text-gray-500">Subway delays common. Add 20-30 minutes to important appointments.</p>
+              </div>
+              <i data-lucide="chevron-down" class="w-5 h-5 text-gray-400 transition-transform"></i>
+            </div>
+          </div>
+          
+          <div class="action-item medium" onclick="toggleAction(this)">
+            <div class="flex items-start gap-3">
+              <input type="checkbox" class="mt-1 w-4 h-4 rounded border-gray-300 text-[#1E3A5F] focus:ring-[#1E3A5F]">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="alert-badge medium text-xs">Medium</span>
+                  <span class="text-sm font-medium text-[#1A1A1A]">Use Official Taxi/Rideshare</span>
+                </div>
+                <p class="text-sm text-gray-500">Avoid unlicensed vehicles. Use yellow cabs or verified apps (Uber, Lyft).</p>
+              </div>
+              <i data-lucide="chevron-down" class="w-5 h-5 text-gray-400 transition-transform"></i>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Emergency Contacts -->
+        <div class="mt-6 pt-6 border-t border-gray-100">
+          <h4 class="text-sm font-medium text-gray-700 mb-3">Emergency Contacts</h4>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="flex items-center gap-3 p-3 rounded-lg bg-red-50 border border-red-100">
+              <i data-lucide="phone-call" class="w-5 h-5 text-red-600"></i>
+              <div>
+                <p class="text-sm font-medium text-red-800">Emergency</p>
+                <p class="text-lg font-bold text-red-600 font-mono">911</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 p-3 rounded-lg bg-blue-50 border border-blue-100">
+              <i data-lucide="phone" class="w-5 h-5 text-blue-600"></i>
+              <div>
+                <p class="text-sm font-medium text-blue-800">City Services</p>
+                <p class="text-lg font-bold text-blue-600 font-mono">311</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Authority Actions -->
+      <div class="card animate-slide-in" style="animation-delay: 100ms;">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
+              <i data-lucide="shield" class="w-5 h-5 text-purple-600"></i>
+            </div>
+            <div>
+              <h3 class="font-semibold text-[#1A1A1A]">Authority Actions</h3>
+              <p class="text-sm text-gray-500">Recommendations for city officials</p>
+            </div>
+          </div>
+          <div class="flex bg-gray-100 rounded-lg p-1">
+            <button class="tab-btn active text-xs py-1 px-3" data-auth-tab="city">City</button>
+            <button class="tab-btn text-xs py-1 px-3" data-auth-tab="district">District</button>
+            <button class="tab-btn text-xs py-1 px-3" data-auth-tab="state">State</button>
+          </div>
+        </div>
+        
+        <div id="cityActions" class="space-y-3 auth-tab-content">
+          <div class="p-4 rounded-xl bg-red-50 border border-red-100">
+            <div class="flex items-start gap-3">
+              <div class="w-8 h-8 rounded-lg bg-red-500 flex items-center justify-center flex-shrink-0">
+                <span class="text-white text-sm font-bold">1</span>
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="alert-badge critical text-xs">Critical Priority</span>
+                </div>
+                <h4 class="text-sm font-medium text-red-800 mb-1">Increase Police Patrols</h4>
+                <p class="text-sm text-red-600 mb-2">Deploy additional officers to high-crime areas during evening hours (8 PM - 2 AM).</p>
+                <div class="flex items-center gap-4 text-xs text-red-500">
+                  <span class="flex items-center gap-1">
+                    <i data-lucide="clock" class="w-3 h-3"></i>
+                    Timeline: 7 days
+                  </span>
+                  <span class="flex items-center gap-1">
+                    <i data-lucide="dollar-sign" class="w-3 h-3"></i>
+                    Cost: $2.5M
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="p-4 rounded-xl bg-orange-50 border border-orange-100">
+            <div class="flex items-start gap-3">
+              <div class="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center flex-shrink-0">
+                <span class="text-white text-sm font-bold">2</span>
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="alert-badge high text-xs">High Priority</span>
+                </div>
+                <h4 class="text-sm font-medium text-orange-800 mb-1">Infrastructure Maintenance</h4>
+                <p class="text-sm text-orange-600 mb-2">Prioritize road repairs and bridge inspections in Queens and Brooklyn.</p>
+                <div class="flex items-center gap-4 text-xs text-orange-500">
+                  <span class="flex items-center gap-1">
+                    <i data-lucide="clock" class="w-3 h-3"></i>
+                    Timeline: 30 days
+                  </span>
+                  <span class="flex items-center gap-1">
+                    <i data-lucide="dollar-sign" class="w-3 h-3"></i>
+                    Cost: $15M
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="p-4 rounded-xl bg-yellow-50 border border-yellow-100">
+            <div class="flex items-start gap-3">
+              <div class="w-8 h-8 rounded-lg bg-yellow-500 flex items-center justify-center flex-shrink-0">
+                <span class="text-white text-sm font-bold">3</span>
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="alert-badge medium text-xs">Medium Priority</span>
+                </div>
+                <h4 class="text-sm font-medium text-yellow-800 mb-1">Public Transit Improvements</h4>
+                <p class="text-sm text-yellow-600 mb-2">Address subway delays through signal system upgrades.</p>
+                <div class="flex items-center gap-4 text-xs text-yellow-600">
+                  <span class="flex items-center gap-1">
+                    <i data-lucide="clock" class="w-3 h-3"></i>
+                    Timeline: 90 days
+                  </span>
+                  <span class="flex items-center gap-1">
+                    <i data-lucide="dollar-sign" class="w-3 h-3"></i>
+                    Cost: $50M
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-100">
+            <div class="flex items-start gap-3">
+              <div class="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center flex-shrink-0">
+                <span class="text-white text-sm font-bold">4</span>
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="alert-badge low text-xs">Low Priority</span>
+                </div>
+                <h4 class="text-sm font-medium text-emerald-800 mb-1">Flu Vaccination Campaign</h4>
+                <p class="text-sm text-emerald-600 mb-2">Expand free vaccination sites in underserved neighborhoods.</p>
+                <div class="flex items-center gap-4 text-xs text-emerald-600">
+                  <span class="flex items-center gap-1">
+                    <i data-lucide="clock" class="w-3 h-3"></i>
+                    Timeline: 14 days
+                  </span>
+                  <span class="flex items-center gap-1">
+                    <i data-lucide="dollar-sign" class="w-3 h-3"></i>
+                    Cost: $500K
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div id="districtActions" class="space-y-3 auth-tab-content hidden">
+          <div class="p-4 rounded-xl bg-orange-50 border border-orange-100">
+            <div class="flex items-start gap-3">
+              <div class="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center flex-shrink-0">
+                <span class="text-white text-sm font-bold">1</span>
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="alert-badge high text-xs">High Priority</span>
+                </div>
+                <h4 class="text-sm font-medium text-orange-800 mb-1">Community Policing Program</h4>
+                <p class="text-sm text-orange-600 mb-2">Establish neighborhood watch programs in high-crime districts.</p>
+                <div class="flex items-center gap-4 text-xs text-orange-500">
+                  <span class="flex items-center gap-1">
+                    <i data-lucide="clock" class="w-3 h-3"></i>
+                    Timeline: 30 days
+                  </span>
+                  <span class="flex items-center gap-1">
+                    <i data-lucide="dollar-sign" class="w-3 h-3"></i>
+                    Cost: $800K
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div id="stateActions" class="space-y-3 auth-tab-content hidden">
+          <div class="p-4 rounded-xl bg-yellow-50 border border-yellow-100">
+            <div class="flex items-start gap-3">
+              <div class="w-8 h-8 rounded-lg bg-yellow-500 flex items-center justify-center flex-shrink-0">
+                <span class="text-white text-sm font-bold">1</span>
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="alert-badge medium text-xs">Medium Priority</span>
+                </div>
+                <h4 class="text-sm font-medium text-yellow-800 mb-1">State Funding Allocation</h4>
+                <p class="text-sm text-yellow-600 mb-2">Request additional state funds for infrastructure projects.</p>
+                <div class="flex items-center gap-4 text-xs text-yellow-600">
+                  <span class="flex items-center gap-1">
+                    <i data-lucide="clock" class="w-3 h-3"></i>
+                    Timeline: 60 days
+                  </span>
+                  <span class="flex items-center gap-1">
+                    <i data-lucide="dollar-sign" class="w-3 h-3"></i>
+                    Cost: $100M
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Implementation Tracking -->
+        <div class="mt-6 pt-6 border-t border-gray-100">
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="text-sm font-medium text-gray-700">Implementation Progress</h4>
+            <span class="text-sm text-gray-500">2 of 8 completed</span>
+          </div>
+          <div class="progress-bar h-3">
+            <div class="progress-fill bg-gradient-to-r from-emerald-500 to-emerald-400" style="width: 25%"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="mt-12 py-8 border-t border-gray-200">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div>
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-[#1E3A5F] to-[#7C3AED] flex items-center justify-center">
+              <i data-lucide="globe" class="w-4 h-4 text-white"></i>
+            </div>
+            <span class="font-semibold text-[#1A1A1A]">GeoForecast</span>
+          </div>
+          <p class="text-sm text-gray-500">Intelligent geopolitical threat analysis and forecasting platform.</p>
+        </div>
+        <div>
+          <h4 class="font-medium text-[#1A1A1A] mb-3">Quick Links</h4>
+          <ul class="space-y-2 text-sm text-gray-500">
+            <li><a href="index.html" class="hover:text-[#1E3A5F]">Global Overview</a></li>
+            <li><a href="predictions.html" class="hover:text-[#1E3A5F]">Predictions</a></li>
+            <li><a href="timeline.html" class="hover:text-[#1E3A5F]">Timeline</a></li>
+            <li><a href="alerts.html" class="hover:text-[#1E3A5F]">Alerts</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-medium text-[#1A1A1A] mb-3">Resources</h4>
+          <ul class="space-y-2 text-sm text-gray-500">
+            <li><a href="#" class="hover:text-[#1E3A5F]">Documentation</a></li>
+            <li><a href="#" class="hover:text-[#1E3A5F]">API Reference</a></li>
+            <li><a href="#" class="hover:text-[#1E3A5F]">Support</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-medium text-[#1A1A1A] mb-3">Legal</h4>
+          <ul class="space-y-2 text-sm text-gray-500">
+            <li><a href="#" class="hover:text-[#1E3A5F]">Privacy Policy</a></li>
+            <li><a href="#" class="hover:text-[#1E3A5F]">Terms of Service</a></li>
+            <li><a href="#" class="hover:text-[#1E3A5F]">Cookie Policy</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="mt-8 pt-6 border-t border-gray-200 flex flex-col md:flex-row items-center justify-between gap-4">
+        <p class="text-sm text-gray-500">&copy; 2026 GeoForecast. All rights reserved.</p>
+        <div class="flex items-center gap-4">
+          <a href="#" class="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+            <i data-lucide="twitter" class="w-5 h-5 text-gray-400"></i>
+          </a>
+          <a href="#" class="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+            <i data-lucide="linkedin" class="w-5 h-5 text-gray-400"></i>
+          </a>
+          <a href="#" class="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+            <i data-lucide="github" class="w-5 h-5 text-gray-400"></i>
+          </a>
+        </div>
+      </div>
+    </footer>
+  </main>
+
+
+  <script>
+    // Initialize Lucide icons
+    document.addEventListener('DOMContentLoaded', function() {
+      lucide.createIcons();
+      initializePage();
+    });
+
+    // Global variables
+    let charts = {};
+    let isSubscribed = false;
+    let refreshInterval;
+
+    // Initialize page
+    function initializePage() {
+      parseURLParams();
+      updateLocalTime();
+      initializeCharts();
+      setupEventListeners();
+      startAutoRefresh();
+      animateCounters();
+    }
+
+    // Parse URL parameters
+    function parseURLParams() {
+      const params = new URLSearchParams(window.location.search);
+      const city = params.get('city');
+      const country = params.get('country');
+      
+      if (city) {
+        document.getElementById('cityName').textContent = city;
+        document.getElementById('cityBreadcrumb').textContent = city;
+      }
+      
+      if (country) {
+        document.getElementById('countryCode').textContent = country.toUpperCase();
+        // Update country breadcrumb based on country code
+        const countryNames = {
+          'US': 'United States',
+          'UK': 'United Kingdom',
+          'CA': 'Canada',
+          'AU': 'Australia',
+          'DE': 'Germany',
+          'FR': 'France',
+          'JP': 'Japan',
+          'CN': 'China'
+        };
+        document.getElementById('countryBreadcrumb').textContent = countryNames[country.toUpperCase()] || country.toUpperCase();
+      }
+    }
+
+    // Update local time
+    function updateLocalTime() {
+      const now = new Date();
+      const timeString = now.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        timeZone: 'America/New_York'
+      });
+      document.getElementById('localTime').textContent = timeString;
+      setTimeout(updateLocalTime, 60000);
+    }
+
+    // Initialize all charts
+    function initializeCharts() {
+      initCrimeChart();
+      initHealthChart();
+      initEconomicChart();
+    }
+
+    // Crime Chart
+    function initCrimeChart() {
+      const ctx = document.getElementById('crimeChart');
+      if (!ctx) return;
+      
+      charts.crime = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+          datasets: [{
+            label: 'Crime Index',
+            data: [65, 68, 66, 70, 72, 75, 68],
+            borderColor: '#DC2626',
+            backgroundColor: 'rgba(220, 38, 38, 0.1)',
+            fill: true,
+            tension: 0.4,
+            pointRadius: 4,
+            pointBackgroundColor: '#DC2626',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+              grid: { color: 'rgba(0,0,0,0.05)' }
+            },
+            x: {
+              grid: { display: false }
+            }
+          },
+          interaction: {
+            intersect: false,
+            mode: 'index'
+          }
+        }
+      });
+    }
+
+    // Health Chart
+    function initHealthChart() {
+      const ctx = document.getElementById('healthChart');
+      if (!ctx) return;
+      
+      charts.health = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+          datasets: [{
+            label: 'Health Index',
+            data: [80, 81, 82, 81, 83, 82, 83],
+            borderColor: '#10B981',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            fill: true,
+            tension: 0.4,
+            pointRadius: 4,
+            pointBackgroundColor: '#10B981',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+              grid: { color: 'rgba(0,0,0,0.05)' }
+            },
+            x: {
+              grid: { display: false }
+            }
+          },
+          interaction: {
+            intersect: false,
+            mode: 'index'
+          }
+        }
+      });
+    }
+
+    // Economic Chart
+    function initEconomicChart() {
+      const ctx = document.getElementById('economicChart');
+      if (!ctx) return;
+      
+      charts.economic = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+          datasets: [{
+            label: 'Economic Index',
+            data: [72, 73, 73, 74, 74, 75, 74],
+            borderColor: '#F59E0B',
+            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+            fill: true,
+            tension: 0.4,
+            pointRadius: 4,
+            pointBackgroundColor: '#F59E0B',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+              grid: { color: 'rgba(0,0,0,0.05)' }
+            },
+            x: {
+              grid: { display: false }
+            }
+          },
+          interaction: {
+            intersect: false,
+            mode: 'index'
+          }
+        }
+      });
+    }
+
+    // Setup event listeners
+    function setupEventListeners() {
+      // Chart period tabs
+      document.querySelectorAll('[data-period]').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const chart = this.dataset.chart;
+          const period = this.dataset.period;
+          
+          // Update active state
+          document.querySelectorAll(`[data-chart="${chart}"]`).forEach(b => b.classList.remove('active'));
+          this.classList.add('active');
+          
+          // Update chart data
+          updateChartData(chart, period);
+        });
+      });
+
+      // Individual action tabs
+      document.querySelectorAll('[data-tab]').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const tab = this.dataset.tab;
+          
+          // Update active state
+          document.querySelectorAll('[data-tab]').forEach(b => b.classList.remove('active'));
+          this.classList.add('active');
+          
+          // Show/hide content
+          document.querySelectorAll('.action-tab-content').forEach(content => content.classList.add('hidden'));
+          document.getElementById(tab + 'Actions').classList.remove('hidden');
+        });
+      });
+
+      // Authority action tabs
+      document.querySelectorAll('[data-auth-tab]').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const tab = this.dataset.authTab;
+          
+          // Update active state
+          document.querySelectorAll('[data-auth-tab]').forEach(b => b.classList.remove('active'));
+          this.classList.add('active');
+          
+          // Show/hide content
+          document.querySelectorAll('.auth-tab-content').forEach(content => content.classList.add('hidden'));
+          document.getElementById(tab + 'Actions').classList.remove('hidden');
+        });
+      });
+
+      // Mobile menu toggle
+      const menuToggle = document.getElementById('menuToggle');
+      if (menuToggle) {
+        menuToggle.addEventListener('click', function() {
+          document.getElementById('sidebar').classList.toggle('open');
+        });
+      }
+    }
+
+    // Update chart data based on period
+    function updateChartData(chartName, period) {
+      const chart = charts[chartName];
+      if (!chart) return;
+
+      let labels, data;
+      
+      switch(period) {
+        case '7d':
+          labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+          data = chartName === 'crime' ? [65, 68, 66, 70, 72, 75, 68] :
+                 chartName === 'health' ? [80, 81, 82, 81, 83, 82, 83] :
+                 [72, 73, 73, 74, 74, 75, 74];
+          break;
+        case '30d':
+          labels = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+          data = chartName === 'crime' ? [64, 67, 69, 68] :
+                 chartName === 'health' ? [79, 81, 82, 83] :
+                 [71, 73, 74, 74];
+          break;
+        case '1y':
+          labels = ['Jan', 'Mar', 'May', 'Jul', 'Sep', 'Nov'];
+          data = chartName === 'crime' ? [62, 64, 66, 68, 67, 68] :
+                 chartName === 'health' ? [78, 79, 80, 81, 82, 83] :
+                 [70, 71, 72, 73, 74, 74];
+          break;
+      }
+      
+      chart.data.labels = labels;
+      chart.data.datasets[0].data = data;
+      chart.update('active');
+    }
+
+    // Animate counters
+    function animateCounters() {
+      const counters = document.querySelectorAll('[id$="Index"], [id="aqi"], [id="unemployment"], [id="infrastructure"]');
+      
+      counters.forEach(counter => {
+        const target = parseFloat(counter.textContent);
+        const isPercentage = counter.textContent.includes('%');
+        const duration = 1000;
+        const start = 0;
+        const startTime = performance.now();
+        
+        function update(currentTime) {
+          const elapsed = currentTime - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          const easeProgress = 1 - Math.pow(1 - progress, 3);
+          const current = start + (target - start) * easeProgress;
+          
+          if (isPercentage) {
+            counter.textContent = current.toFixed(1) + '%';
+          } else {
+            counter.textContent = current.toFixed(1);
+          }
+          
+          if (progress < 1) {
+            requestAnimationFrame(update);
+          }
+        }
+        
+        requestAnimationFrame(update);
+      });
+
+      // Animate threat score circle
+      setTimeout(() => {
+        const circle = document.getElementById('threatScoreCircle');
+        if (circle) {
+          circle.style.strokeDashoffset = '98.02';
+        }
+      }, 300);
+    }
+
+    // Start auto-refresh
+    function startAutoRefresh() {
+      refreshInterval = setInterval(() => {
+        refreshMetrics();
+      }, 30000); // 30 seconds
+    }
+
+    // Refresh metrics
+    function refreshMetrics() {
+      const refreshIcon = document.getElementById('refreshIcon');
+      if (refreshIcon) {
+        refreshIcon.classList.add('animate-spin');
+      }
+
+      // Simulate data update
+      setTimeout(() => {
+        // Update crime index
+        const crimeIndex = document.getElementById('crimeIndex');
+        if (crimeIndex) {
+          const newValue = (65 + Math.random() * 10).toFixed(1);
+          crimeIndex.textContent = newValue;
+        }
+
+        // Update last updated time
+        const lastUpdated = document.getElementById('lastUpdated');
+        if (lastUpdated) {
+          lastUpdated.textContent = 'Just now';
+        }
+
+        if (refreshIcon) {
+          refreshIcon.classList.remove('animate-spin');
+        }
+
+        // Update charts with slight variations
+        Object.values(charts).forEach(chart => {
+          const data = chart.data.datasets[0].data;
+          const newData = data.map(v => Math.max(0, Math.min(100, v + (Math.random() - 0.5) * 5)));
+          chart.data.datasets[0].data = newData;
+          chart.update('none');
+        });
+      }, 800);
+    }
+
+    // Toggle action item
+    function toggleAction(element) {
+      const checkbox = element.querySelector('input[type="checkbox"]');
+      const icon = element.querySelector('[data-lucide="chevron-down"]');
+      
+      checkbox.checked = !checkbox.checked;
+      
+      if (checkbox.checked) {
+        element.style.opacity = '0.6';
+        icon.style.transform = 'rotate(180deg)';
+      } else {
+        element.style.opacity = '1';
+        icon.style.transform = 'rotate(0deg)';
+      }
+    }
+
+    // Toggle alert subscription
+    function toggleAlertSubscription() {
+      isSubscribed = !isSubscribed;
+      const btn = document.getElementById('subscribeText');
+      if (btn) {
+        btn.textContent = isSubscribed ? 'Subscribed' : 'Subscribe to Alerts';
+      }
+      
+      // Show notification
+      showNotification(isSubscribed ? 'Subscribed to city alerts' : 'Unsubscribed from city alerts');
+    }
+
+    // Share city report
+    function shareCityReport() {
+      const cityName = document.getElementById('cityName').textContent;
+      
+      if (navigator.share) {
+        navigator.share({
+          title: `${cityName} - Threat Assessment Report`,
+          text: `Check out the current threat assessment for ${cityName}`,
+          url: window.location.href
+        });
+      } else {
+        // Fallback: copy to clipboard
+        navigator.clipboard.writeText(window.location.href);
+        showNotification('Link copied to clipboard');
+      }
+    }
+
+    // Export city data
+    function exportCityData() {
+      const cityName = document.getElementById('cityName').textContent;
+      const data = {
+        city: cityName,
+        timestamp: new Date().toISOString(),
+        metrics: {
+          crimeIndex: document.getElementById('crimeIndex').textContent,
+          healthIndex: document.getElementById('healthIndex').textContent,
+          economicIndex: document.getElementById('economicIndex').textContent,
+          aqi: document.getElementById('aqi').textContent,
+          unemployment: document.getElementById('unemployment').textContent,
+          infrastructure: document.getElementById('infrastructure').textContent
+        }
+      };
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${cityName.replace(/\s+/g, '_')}_threat_report.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      showNotification('Data exported successfully');
+    }
+
+    // Show notification
+    function showNotification(message) {
+      const notification = document.createElement('div');
+      notification.className = 'fixed bottom-4 right-4 px-6 py-3 bg-[#1E3A5F] text-white rounded-lg shadow-lg z-50 animate-slide-in';
+      notification.textContent = message;
+      document.body.appendChild(notification);
+
+      setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateY(20px)';
+        setTimeout(() => notification.remove(), 300);
+      }, 3000);
+    }
+
+    // Bandwidth manager
+    const bandwidthManager = {
+      mode: 'high', // high, medium, low
+      
+      init() {
+        const savedMode = localStorage.getItem('geoForecast_bandwidth');
+        if (savedMode) {
+          this.mode = savedMode;
+          this.applyMode();
+        }
+      },
+      
+      applyMode() {
+        document.body.dataset.bandwidth = this.mode;
+        
+        if (this.mode === 'low') {
+          // Disable animations
+          document.querySelectorAll('.animate-pulse, .animate-slide-in').forEach(el => {
+            el.style.animation = 'none';
+          });
+          
+          // Reduce chart quality
+          Chart.defaults.animation = false;
+          Chart.defaults.transitions = {};
+        }
+      }
+    };
+
+    // Initialize bandwidth manager
+    bandwidthManager.init();
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+      // Alt + A for alerts
+      if (e.altKey && e.key === 'a') {
+        e.preventDefault();
+        window.location.href = 'alerts.html';
+      }
+      
+      // Alt + S for settings
+      if (e.altKey && e.key === 's') {
+        e.preventDefault();
+        window.location.href = 'settings.html';
+      }
+      
+      // Escape to close sidebar on mobile
+      if (e.key === 'Escape') {
+        document.getElementById('sidebar').classList.remove('open');
+      }
+    });
+
+    // Intersection Observer for scroll animations
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
+    };
+
+    const scrollObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.style.opacity = '1';
+          entry.target.style.transform = 'translateY(0)';
+        }
+      });
+    }, observerOptions);
+
+    // Observe cards for scroll animations
+    document.querySelectorAll('.card, .metric-card').forEach(card => {
+      card.style.opacity = '0';
+      card.style.transform = 'translateY(20px)';
+      card.style.transition = 'opacity 500ms ease-out, transform 500ms ease-out';
+      scrollObserver.observe(card);
+    });
+  </script>
+</body>
+</html>

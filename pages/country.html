@@ -1,0 +1,2327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Country Detail | Geopolitical Forecast Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1E3A5F;
+      --primary-light: #2D4A6F;
+      --primary-dark: #152A45;
+      --secondary: #7C3AED;
+      --secondary-light: #9F67F2;
+      --secondary-dark: #5B21B6;
+      --bg-main: #F5F5DC;
+      --bg-alt: #F0F4F8;
+      --bg-dark: #1A1A2E;
+      --card-bg: #FFFFFF;
+      --card-bg-alt: #FAFAFA;
+      --text-primary: #1A1A1A;
+      --text-secondary: #4A5568;
+      --text-muted: #718096;
+      --text-light: #FFFFFF;
+      --text-gold: #B8860B;
+      --alert-critical: #DC2626;
+      --alert-high: #F97316;
+      --alert-medium: #EAB308;
+      --alert-low: #22C55E;
+      --alert-info: #3B82F6;
+      --accent-gold: #FFD700;
+      --accent-coral: #E85D4E;
+      --accent-teal: #14B8A6;
+      --accent-purple: #7C3AED;
+      --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+      --ease-out: cubic-bezier(0, 0, 0.2, 1);
+      --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    
+    .font-mono {
+      font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    }
+    
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-primary);
+    }
+    
+    /* Header Styles */
+    .header {
+      height: 72px;
+      background: var(--card-bg);
+      border-bottom: 1px solid #E2E8F0;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 0 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .logo {
+      height: 40px;
+      width: 40px;
+      background: var(--primary);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+    
+    .app-name {
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: var(--primary);
+    }
+    
+    .global-threat-indicator {
+      background: linear-gradient(135deg, var(--alert-high), var(--alert-critical));
+      color: white;
+      padding: 8px 16px;
+      border-radius: 9999px;
+      font-weight: 600;
+      font-size: 0.875rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      animation: pulse-threat 2s ease-in-out infinite;
+    }
+    
+    @keyframes pulse-threat {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4); }
+      50% { box-shadow: 0 0 0 8px rgba(249, 115, 22, 0); }
+    }
+    
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .header-icon-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      transition: all 150ms var(--ease-default);
+      position: relative;
+    }
+    
+    .header-icon-btn:hover {
+      background: var(--bg-alt);
+      color: var(--primary);
+    }
+    
+    .badge {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 18px;
+      height: 18px;
+      background: var(--alert-critical);
+      color: white;
+      font-size: 10px;
+      font-weight: 600;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    /* Sidebar Styles */
+    .sidebar {
+      width: 280px;
+      background: var(--card-bg);
+      border-right: 1px solid #E2E8F0;
+      position: fixed;
+      left: 0;
+      top: 72px;
+      bottom: 0;
+      padding: 24px 16px;
+      overflow-y: auto;
+      z-index: 90;
+    }
+    
+    .sidebar-menu {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      color: var(--text-secondary);
+      font-weight: 500;
+      transition: all 150ms var(--ease-default);
+      text-decoration: none;
+    }
+    
+    .sidebar-item:hover {
+      background: #F8FAFC;
+      color: var(--primary);
+    }
+    
+    .sidebar-item.active {
+      background: var(--bg-alt);
+      color: var(--secondary);
+      border-left: 3px solid var(--secondary);
+      margin-left: -3px;
+    }
+    
+    .sidebar-item i {
+      width: 24px;
+      height: 24px;
+    }
+    
+    /* Main Content */
+    .main-content {
+      margin-left: 280px;
+      margin-top: 72px;
+      padding: 32px;
+      min-height: calc(100vh - 72px);
+    }
+    
+    /* Country Header */
+    .country-header {
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 32px;
+      margin-bottom: 32px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    }
+    
+    .country-header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--flag-bg, linear-gradient(135deg, #1E3A5F, #7C3AED));
+      opacity: 0.05;
+      pointer-events: none;
+    }
+    
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 24px;
+    }
+    
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      background: var(--bg-alt);
+      border-radius: 10px;
+      color: var(--text-secondary);
+      font-weight: 500;
+      transition: all 150ms var(--ease-default);
+      text-decoration: none;
+    }
+    
+    .back-btn:hover {
+      background: var(--primary);
+      color: white;
+    }
+    
+    .header-actions {
+      display: flex;
+      gap: 12px;
+    }
+    
+    .action-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-weight: 500;
+      transition: all 150ms var(--ease-default);
+      cursor: pointer;
+      border: none;
+    }
+    
+    .action-btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+    
+    .action-btn-primary:hover {
+      background: var(--primary-light);
+      transform: translateY(-1px);
+    }
+    
+    .action-btn-secondary {
+      background: var(--bg-alt);
+      color: var(--text-secondary);
+    }
+    
+    .action-btn-secondary:hover {
+      background: #E2E8F0;
+    }
+    
+    .country-info {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+    
+    .country-flag {
+      width: 100px;
+      height: 100px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 64px;
+      background: var(--bg-alt);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .country-details {
+      flex: 1;
+    }
+    
+    .country-name {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+    
+    .country-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+    
+    .iso-badge {
+      background: var(--primary);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+    }
+    
+    .threat-score-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .circular-progress {
+      width: 120px;
+      height: 120px;
+      position: relative;
+    }
+    
+    .circular-progress svg {
+      transform: rotate(-90deg);
+    }
+    
+    .progress-track {
+      fill: none;
+      stroke: #E2E8F0;
+      stroke-width: 10;
+    }
+    
+    .progress-fill {
+      fill: none;
+      stroke-width: 10;
+      stroke-linecap: round;
+      stroke-dasharray: 283;
+      stroke-dashoffset: 283;
+      transition: stroke-dashoffset 1000ms var(--ease-out);
+    }
+    
+    .progress-value {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2rem;
+      font-weight: 700;
+    }
+    
+    .progress-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    /* Metrics Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+    
+    @media (max-width: 1200px) {
+      .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .metrics-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .metric-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+      transition: all 300ms var(--ease-default);
+      cursor: pointer;
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    
+    .metric-card.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    
+    .metric-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+    }
+    
+    .metric-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    
+    .metric-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .metric-icon.crime { background: rgba(220, 38, 38, 0.1); color: var(--alert-critical); }
+    .metric-icon.health { background: rgba(20, 184, 166, 0.1); color: var(--accent-teal); }
+    .metric-icon.economic { background: rgba(124, 58, 237, 0.1); color: var(--secondary); }
+    .metric-icon.weather { background: rgba(59, 130, 246, 0.1); color: var(--alert-info); }
+    
+    .metric-trend {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+    
+    .trend-up { color: var(--alert-critical); }
+    .trend-down { color: var(--accent-teal); }
+    
+    .metric-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+    
+    .metric-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+    }
+    
+    .metric-chart {
+      height: 50px;
+    }
+    
+    /* Two Column Layout */
+    .two-column {
+      display: grid;
+      grid-template-columns: 60% 40%;
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+    
+    @media (max-width: 1024px) {
+      .two-column {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .two-column-equal {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+    
+    @media (max-width: 1024px) {
+      .two-column-equal {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    /* Panel Styles */
+    .panel {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    }
+    
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    
+    .panel-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .panel-title i {
+      color: var(--secondary);
+    }
+    
+    /* City List */
+    .city-list-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    
+    .search-filter {
+      display: flex;
+      gap: 12px;
+    }
+    
+    .search-input {
+      padding: 10px 16px;
+      border: 1px solid #E2E8F0;
+      border-radius: 10px;
+      font-size: 0.875rem;
+      width: 200px;
+      transition: all 150ms var(--ease-default);
+    }
+    
+    .search-input:focus {
+      outline: none;
+      border-color: var(--secondary);
+      box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+    }
+    
+    .filter-select {
+      padding: 10px 16px;
+      border: 1px solid #E2E8F0;
+      border-radius: 10px;
+      font-size: 0.875rem;
+      background: white;
+      cursor: pointer;
+    }
+    
+    .city-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    .city-table th {
+      text-align: left;
+      padding: 12px 16px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid #E2E8F0;
+    }
+    
+    .city-table td {
+      padding: 16px;
+      border-bottom: 1px solid #F0F4F8;
+      transition: background 150ms var(--ease-default);
+    }
+    
+    .city-table tr {
+      cursor: pointer;
+      opacity: 0;
+      animation: fadeInRow 300ms var(--ease-out) forwards;
+    }
+    
+    .city-table tr:nth-child(1) { animation-delay: 30ms; }
+    .city-table tr:nth-child(2) { animation-delay: 60ms; }
+    .city-table tr:nth-child(3) { animation-delay: 90ms; }
+    .city-table tr:nth-child(4) { animation-delay: 120ms; }
+    .city-table tr:nth-child(5) { animation-delay: 150ms; }
+    .city-table tr:nth-child(6) { animation-delay: 180ms; }
+    .city-table tr:nth-child(7) { animation-delay: 210ms; }
+    .city-table tr:nth-child(8) { animation-delay: 240ms; }
+    
+    @keyframes fadeInRow {
+      from { opacity: 0; transform: translateX(-10px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    
+    .city-table tr:hover td {
+      background: #F8FAFC;
+    }
+    
+    .city-name {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    
+    .city-population {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+    
+    .threat-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    
+    .threat-critical { background: rgba(220, 38, 38, 0.1); color: var(--alert-critical); }
+    .threat-high { background: rgba(249, 115, 22, 0.1); color: var(--alert-high); }
+    .threat-medium { background: rgba(234, 179, 8, 0.1); color: var(--alert-medium); }
+    .threat-low { background: rgba(34, 197, 94, 0.1); color: var(--alert-low); }
+    
+    .score-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    
+    .score-high { background: rgba(220, 38, 38, 0.1); color: var(--alert-critical); }
+    .score-medium { background: rgba(234, 179, 8, 0.1); color: var(--alert-medium); }
+    .score-low { background: rgba(34, 197, 94, 0.1); color: var(--alert-low); }
+    
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 20px;
+    }
+    
+    .page-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 150ms var(--ease-default);
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+    }
+    
+    .page-btn:hover {
+      background: var(--bg-alt);
+    }
+    
+    .page-btn.active {
+      background: var(--primary);
+      color: white;
+    }
+    
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--bg-alt);
+      padding: 4px;
+      border-radius: 10px;
+    }
+    
+    .tab {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 150ms var(--ease-default);
+      border: none;
+      background: transparent;
+    }
+    
+    .tab:hover {
+      color: var(--text-primary);
+    }
+    
+    .tab.active {
+      background: white;
+      color: var(--primary);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .tab-content {
+      display: none;
+      animation: fadeIn 300ms var(--ease-out);
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Game Theory Panel */
+    .scenario-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .scenario-item {
+      padding: 16px;
+      background: var(--bg-alt);
+      border-radius: 12px;
+      transition: all 150ms var(--ease-default);
+    }
+    
+    .scenario-item:hover {
+      background: #E2E8F0;
+    }
+    
+    .scenario-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    
+    .scenario-name {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    
+    .scenario-probability {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--secondary);
+    }
+    
+    .scenario-bar {
+      height: 8px;
+      background: #E2E8F0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    
+    .scenario-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--secondary), var(--secondary-light));
+      border-radius: 4px;
+      transition: width 700ms var(--ease-out);
+    }
+    
+    .run-simulation-btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--secondary);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 150ms var(--ease-default);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 20px;
+    }
+    
+    .run-simulation-btn:hover {
+      background: var(--secondary-dark);
+      transform: translateY(-1px);
+    }
+    
+    /* Astrology Panel */
+    .planet-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    
+    .planet-item {
+      text-align: center;
+      padding: 16px 8px;
+      background: var(--bg-alt);
+      border-radius: 12px;
+    }
+    
+    .planet-symbol {
+      font-size: 1.5rem;
+      margin-bottom: 4px;
+    }
+    
+    .planet-name {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    
+    .planet-position {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-gold);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    
+    .forecast-item {
+      padding: 16px;
+      border-left: 3px solid var(--accent-gold);
+      background: rgba(255, 215, 0, 0.05);
+      border-radius: 0 12px 12px 0;
+      margin-bottom: 12px;
+    }
+    
+    .forecast-date {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    
+    .forecast-text {
+      font-size: 0.875rem;
+      color: var(--text-primary);
+    }
+    
+    .confidence-score {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      background: var(--bg-alt);
+      border-radius: 12px;
+      margin-top: 16px;
+    }
+    
+    .confidence-label {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+    
+    .confidence-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--accent-gold);
+    }
+    
+    /* Pattern Mapping */
+    .pattern-chart-container {
+      height: 200px;
+      margin-bottom: 20px;
+    }
+    
+    .pattern-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .pattern-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: var(--bg-alt);
+      border-radius: 10px;
+    }
+    
+    .pattern-match {
+      width: 50px;
+      text-align: center;
+    }
+    
+    .match-percentage {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--secondary);
+    }
+    
+    .match-label {
+      font-size: 0.625rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+    
+    .pattern-info {
+      flex: 1;
+    }
+    
+    .pattern-name {
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: var(--text-primary);
+    }
+    
+    .pattern-period {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    
+    /* Authority Actions */
+    .actions-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #E2E8F0;
+      padding-bottom: 12px;
+    }
+    
+    .action-tab {
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 150ms var(--ease-default);
+      border: none;
+      background: transparent;
+    }
+    
+    .action-tab:hover {
+      color: var(--text-primary);
+      background: var(--bg-alt);
+    }
+    
+    .action-tab.active {
+      color: var(--primary);
+      background: var(--bg-alt);
+    }
+    
+    .action-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .action-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 16px;
+      background: var(--bg-alt);
+      border-radius: 12px;
+      transition: all 150ms var(--ease-default);
+      cursor: pointer;
+    }
+    
+    .action-item:hover {
+      background: #E2E8F0;
+    }
+    
+    .action-priority {
+      width: 4px;
+      height: 40px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    
+    .priority-critical { background: var(--alert-critical); }
+    .priority-high { background: var(--alert-high); }
+    .priority-medium { background: var(--alert-medium); }
+    .priority-low { background: var(--alert-low); }
+    
+    .action-content {
+      flex: 1;
+    }
+    
+    .action-title {
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+    
+    .action-description {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+    
+    .action-meta {
+      display: flex;
+      gap: 16px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    
+    .action-meta span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    
+    .action-checkbox {
+      width: 20px;
+      height: 20px;
+      border: 2px solid #CBD5E0;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 150ms var(--ease-default);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    
+    .action-checkbox:hover {
+      border-color: var(--secondary);
+    }
+    
+    .action-checkbox.checked {
+      background: var(--accent-teal);
+      border-color: var(--accent-teal);
+      color: white;
+    }
+    
+    /* Footer */
+    .footer {
+      background: var(--bg-dark);
+      color: var(--text-light);
+      padding: 48px 32px;
+      margin-left: 280px;
+      margin-top: 48px;
+    }
+    
+    .footer-content {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 48px;
+      max-width: 1200px;
+    }
+    
+    .footer-brand {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    
+    .footer-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .footer-tagline {
+      color: rgba(255,255,255,0.7);
+      font-size: 0.875rem;
+    }
+    
+    .footer-column h4 {
+      font-weight: 600;
+      margin-bottom: 16px;
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    .footer-links {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .footer-links a {
+      color: rgba(255,255,255,0.7);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: color 150ms var(--ease-default);
+    }
+    
+    .footer-links a:hover {
+      color: white;
+    }
+    
+    .footer-bottom {
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.875rem;
+      color: rgba(255,255,255,0.5);
+    }
+    
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .sidebar {
+        transform: translateX(-100%);
+        transition: transform 300ms var(--ease-default);
+      }
+      
+      .sidebar.open {
+        transform: translateX(0);
+      }
+      
+      .main-content, .footer {
+        margin-left: 0;
+      }
+      
+      .country-info {
+        flex-direction: column;
+        text-align: center;
+      }
+      
+      .footer-content {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .header {
+        padding: 0 16px;
+      }
+      
+      .main-content {
+        padding: 16px;
+      }
+      
+      .country-name {
+        font-size: 1.75rem;
+      }
+      
+      .header-top {
+        flex-direction: column;
+        gap: 16px;
+      }
+      
+      .header-actions {
+        width: 100%;
+        justify-content: stretch;
+      }
+      
+      .action-btn {
+        flex: 1;
+        justify-content: center;
+      }
+      
+      .footer-content {
+        grid-template-columns: 1fr;
+      }
+      
+      .search-filter {
+        flex-direction: column;
+        width: 100%;
+      }
+      
+      .search-input, .filter-select {
+        width: 100%;
+      }
+      
+      .city-table {
+        font-size: 0.75rem;
+      }
+      
+      .city-table th,
+      .city-table td {
+        padding: 8px;
+      }
+    }
+    
+    /* Reduced Motion */
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+    
+    /* Loading State */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255,255,255,0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 300ms var(--ease-default);
+    }
+    
+    .loading-overlay.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+    
+    .loading-spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid #E2E8F0;
+      border-top-color: var(--secondary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <a href="index.html" class="logo">
+        <i data-lucide="globe" style="width: 24px; height: 24px;"></i>
+      </a>
+      <span class="app-name">GeoForecast</span>
+    </div>
+    <div class="global-threat-indicator">
+      <i data-lucide="alert-triangle" style="width: 16px; height: 16px;"></i>
+      <span>Global Threat: HIGH</span>
+    </div>
+    <div class="header-right">
+      <a href="alerts.html" class="header-icon-btn">
+        <i data-lucide="bell" style="width: 20px; height: 20px;"></i>
+        <span class="badge">12</span>
+      </a>
+      <a href="settings.html" class="header-icon-btn">
+        <i data-lucide="settings" style="width: 20px; height: 20px;"></i>
+      </a>
+      <div class="header-icon-btn">
+        <i data-lucide="user" style="width: 20px; height: 20px;"></i>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <nav class="sidebar-menu">
+      <a href="index.html" class="sidebar-item">
+        <i data-lucide="globe"></i>
+        <span>Global Overview</span>
+      </a>
+      <a href="predictions.html" class="sidebar-item">
+        <i data-lucide="brain"></i>
+        <span>Predictions</span>
+      </a>
+      <a href="timeline.html" class="sidebar-item">
+        <i data-lucide="calendar"></i>
+        <span>Timeline</span>
+      </a>
+      <a href="alerts.html" class="sidebar-item">
+        <i data-lucide="bell"></i>
+        <span>Alert Center</span>
+        <span style="margin-left: auto; background: var(--alert-critical); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem;">12</span>
+      </a>
+      <a href="settings.html" class="sidebar-item">
+        <i data-lucide="settings"></i>
+        <span>Settings</span>
+      </a>
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Country Header -->
+    <section class="country-header">
+      <div class="header-top">
+        <a href="index.html" class="back-btn">
+          <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i>
+          <span>Back to Global</span>
+        </a>
+        <div class="header-actions">
+          <button class="action-btn action-btn-secondary" onclick="shareCountry()">
+            <i data-lucide="share-2" style="width: 18px; height: 18px;"></i>
+            <span>Share</span>
+          </button>
+          <button class="action-btn action-btn-secondary" onclick="exportData()">
+            <i data-lucide="download" style="width: 18px; height: 18px;"></i>
+            <span>Export</span>
+          </button>
+          <button class="action-btn action-btn-primary" onclick="toggleSubscription()">
+            <i data-lucide="bell-plus" style="width: 18px; height: 18px;"></i>
+            <span id="subscribe-text">Subscribe</span>
+          </button>
+        </div>
+      </div>
+      <div class="country-info">
+        <div class="country-flag" id="country-flag">🇺🇸</div>
+        <div class="country-details">
+          <h1 class="country-name" id="country-name">United States</h1>
+          <div class="country-meta">
+            <span class="iso-badge" id="iso-code">US</span>
+            <span id="region">North America</span>
+            <span>•</span>
+            <span id="population">331.9M population</span>
+            <span>•</span>
+            <span>Updated: <span id="last-updated">Just now</span></span>
+          </div>
+        </div>
+        <div class="threat-score-container">
+          <div class="circular-progress">
+            <svg width="120" height="120" viewBox="0 0 120 120">
+              <circle class="progress-track" cx="60" cy="60" r="45"></circle>
+              <circle class="progress-fill" id="threat-progress" cx="60" cy="60" r="45" stroke="#F97316"></circle>
+            </svg>
+            <div class="progress-value" id="threat-score" style="color: var(--alert-high);">62</div>
+          </div>
+          <span class="progress-label">Threat Score</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Key Metrics Grid -->
+    <section class="metrics-grid">
+      <div class="metric-card" onclick="expandMetric('crime')">
+        <div class="metric-header">
+          <div class="metric-icon crime">
+            <i data-lucide="shield-alert" style="width: 24px; height: 24px;"></i>
+          </div>
+          <div class="metric-trend trend-up">
+            <i data-lucide="trending-up" style="width: 16px; height: 16px;"></i>
+            <span>+3.2%</span>
+          </div>
+        </div>
+        <div class="metric-label">Crime Index</div>
+        <div class="metric-value" data-count="58">0</div>
+        <canvas class="metric-chart" id="crime-chart"></canvas>
+      </div>
+      
+      <div class="metric-card" onclick="expandMetric('health')">
+        <div class="metric-header">
+          <div class="metric-icon health">
+            <i data-lucide="heart-pulse" style="width: 24px; height: 24px;"></i>
+          </div>
+          <div class="metric-trend trend-down">
+            <i data-lucide="trending-down" style="width: 16px; height: 16px;"></i>
+            <span>-1.5%</span>
+          </div>
+        </div>
+        <div class="metric-label">Health Index</div>
+        <div class="metric-value" data-count="72">0</div>
+        <canvas class="metric-chart" id="health-chart"></canvas>
+      </div>
+      
+      <div class="metric-card" onclick="expandMetric('economic')">
+        <div class="metric-header">
+          <div class="metric-icon economic">
+            <i data-lucide="trending-up" style="width: 24px; height: 24px;"></i>
+          </div>
+          <div class="metric-trend trend-down">
+            <i data-lucide="trending-down" style="width: 16px; height: 16px;"></i>
+            <span>-0.8%</span>
+          </div>
+        </div>
+        <div class="metric-label">Economic Index</div>
+        <div class="metric-value" data-count="65">0</div>
+        <canvas class="metric-chart" id="economic-chart"></canvas>
+      </div>
+      
+      <div class="metric-card" onclick="expandMetric('weather')">
+        <div class="metric-header">
+          <div class="metric-icon weather">
+            <i data-lucide="cloud-sun" style="width: 24px; height: 24px;"></i>
+          </div>
+          <div class="metric-trend trend-down">
+            <i data-lucide="minus" style="width: 16px; height: 16px;"></i>
+            <span>Stable</span>
+          </div>
+        </div>
+        <div class="metric-label">Weather Conditions</div>
+        <div class="metric-value" style="font-size: 1.25rem;">72°F Partly Cloudy</div>
+        <div style="display: flex; gap: 16px; margin-top: 12px; font-size: 0.875rem; color: var(--text-muted);">
+          <span>Humidity: 65%</span>
+          <span>Wind: 12 mph</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Two Column: City List & Game Theory -->
+    <div class="two-column">
+      <!-- City List -->
+      <section class="panel">
+        <div class="city-list-header">
+          <h2 class="panel-title">
+            <i data-lucide="map-pin" style="width: 20px; height: 20px;"></i>
+            Major Cities
+          </h2>
+          <div class="search-filter">
+            <input type="text" class="search-input" placeholder="Search cities..." id="city-search">
+            <select class="filter-select" id="threat-filter">
+              <option value="all">All Threats</option>
+              <option value="critical">Critical</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+        </div>
+        <table class="city-table">
+          <thead>
+            <tr>
+              <th>City</th>
+              <th>Population</th>
+              <th>Threat Level</th>
+              <th>Crime</th>
+              <th>Health</th>
+              <th>Economic</th>
+            </tr>
+          </thead>
+          <tbody id="city-list">
+            <tr onclick="navigateToCity('New York', 'US')">
+              <td>
+                <div class="city-name">New York</div>
+              </td>
+              <td class="city-population">8.3M</td>
+              <td><span class="threat-badge threat-high">High</span></td>
+              <td><span class="score-pill score-high">68</span></td>
+              <td><span class="score-pill score-medium">45</span></td>
+              <td><span class="score-pill score-low">32</span></td>
+            </tr>
+            <tr onclick="navigateToCity('Los Angeles', 'US')">
+              <td>
+                <div class="city-name">Los Angeles</div>
+              </td>
+              <td class="city-population">3.9M</td>
+              <td><span class="threat-badge threat-medium">Medium</span></td>
+              <td><span class="score-pill score-medium">52</span></td>
+              <td><span class="score-pill score-low">38</span></td>
+              <td><span class="score-pill score-medium">48</span></td>
+            </tr>
+            <tr onclick="navigateToCity('Chicago', 'US')">
+              <td>
+                <div class="city-name">Chicago</div>
+              </td>
+              <td class="city-population">2.7M</td>
+              <td><span class="threat-badge threat-high">High</span></td>
+              <td><span class="score-pill score-high">71</span></td>
+              <td><span class="score-pill score-medium">42</span></td>
+              <td><span class="score-pill score-medium">51</span></td>
+            </tr>
+            <tr onclick="navigateToCity('Houston', 'US')">
+              <td>
+                <div class="city-name">Houston</div>
+              </td>
+              <td class="city-population">2.3M</td>
+              <td><span class="threat-badge threat-medium">Medium</span></td>
+              <td><span class="score-pill score-medium">49</span></td>
+              <td><span class="score-pill score-medium">44</span></td>
+              <td><span class="score-pill score-low">35</span></td>
+            </tr>
+            <tr onclick="navigateToCity('Phoenix', 'US')">
+              <td>
+                <div class="city-name">Phoenix</div>
+              </td>
+              <td class="city-population">1.7M</td>
+              <td><span class="threat-badge threat-low">Low</span></td>
+              <td><span class="score-pill score-low">38</span></td>
+              <td><span class="score-pill score-low">31</span></td>
+              <td><span class="score-pill score-low">29</span></td>
+            </tr>
+            <tr onclick="navigateToCity('Philadelphia', 'US')">
+              <td>
+                <div class="city-name">Philadelphia</div>
+              </td>
+              <td class="city-population">1.6M</td>
+              <td><span class="threat-badge threat-medium">Medium</span></td>
+              <td><span class="score-pill score-medium">55</span></td>
+              <td><span class="score-pill score-medium">46</span></td>
+              <td><span class="score-pill score-medium">43</span></td>
+            </tr>
+            <tr onclick="navigateToCity('San Antonio', 'US')">
+              <td>
+                <div class="city-name">San Antonio</div>
+              </td>
+              <td class="city-population">1.5M</td>
+              <td><span class="threat-badge threat-low">Low</span></td>
+              <td><span class="score-pill score-low">41</span></td>
+              <td><span class="score-pill score-low">33</span></td>
+              <td><span class="score-pill score-low">28</span></td>
+            </tr>
+            <tr onclick="navigateToCity('San Diego', 'US')">
+              <td>
+                <div class="city-name">San Diego</div>
+              </td>
+              <td class="city-population">1.4M</td>
+              <td><span class="threat-badge threat-low">Low</span></td>
+              <td><span class="score-pill score-low">35</span></td>
+              <td><span class="score-pill score-low">27</span></td>
+              <td><span class="score-pill score-low">25</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="pagination">
+          <button class="page-btn" onclick="changePage(-1)"><i data-lucide="chevron-left" style="width: 16px; height: 16px;"></i></button>
+          <button class="page-btn active">1</button>
+          <button class="page-btn">2</button>
+          <button class="page-btn">3</button>
+          <button class="page-btn" onclick="changePage(1)"><i data-lucide="chevron-right" style="width: 16px; height: 16px;"></i></button>
+        </div>
+      </section>
+
+      <!-- Game Theory Prediction Panel -->
+      <section class="panel">
+        <div class="panel-header">
+          <h2 class="panel-title">
+            <i data-lucide="brain" style="width: 20px; height: 20px;"></i>
+            Game Theory Predictions
+          </h2>
+          <div class="tabs">
+            <button class="tab active" onclick="switchTab(this, 'gt-current')">Current</button>
+            <button class="tab" onclick="switchTab(this, 'gt-30d')">30d</button>
+            <button class="tab" onclick="switchTab(this, 'gt-90d')">90d</button>
+            <button class="tab" onclick="switchTab(this, 'gt-1y')">1y</button>
+          </div>
+        </div>
+        
+        <div id="gt-current" class="tab-content active">
+          <div class="scenario-list">
+            <div class="scenario-item">
+              <div class="scenario-header">
+                <span class="scenario-name">Economic Stability</span>
+                <span class="scenario-probability">78%</span>
+              </div>
+              <div class="scenario-bar">
+                <div class="scenario-bar-fill" style="width: 78%;"></div>
+              </div>
+            </div>
+            <div class="scenario-item">
+              <div class="scenario-header">
+                <span class="scenario-name">Social Unrest Risk</span>
+                <span class="scenario-probability">34%</span>
+              </div>
+              <div class="scenario-bar">
+                <div class="scenario-bar-fill" style="width: 34%;"></div>
+              </div>
+            </div>
+            <div class="scenario-item">
+              <div class="scenario-header">
+                <span class="scenario-name">Trade Tension Escalation</span>
+                <span class="scenario-probability">52%</span>
+              </div>
+              <div class="scenario-bar">
+                <div class="scenario-bar-fill" style="width: 52%;"></div>
+              </div>
+            </div>
+            <div class="scenario-item">
+              <div class="scenario-header">
+                <span class="scenario-name">Healthcare Strain</span>
+                <span class="scenario-probability">41%</span>
+              </div>
+              <div class="scenario-bar">
+                <div class="scenario-bar-fill" style="width: 41%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div id="gt-30d" class="tab-content">
+          <div class="scenario-list">
+            <div class="scenario-item">
+              <div class="scenario-header">
+                <span class="scenario-name">Economic Stability</span>
+                <span class="scenario-probability">72%</span>
+              </div>
+              <div class="scenario-bar">
+                <div class="scenario-bar-fill" style="width: 72%;"></div>
+              </div>
+            </div>
+            <div class="scenario-item">
+              <div class="scenario-header">
+                <span class="scenario-name">Social Unrest Risk</span>
+                <span class="scenario-probability">38%</span>
+              </div>
+              <div class="scenario-bar">
+                <div class="scenario-bar-fill" style="width: 38%;"></div>
+              </div>
+            </div>
+            <div class="scenario-item">
+              <div class="scenario-header">
+                <span class="scenario-name">Trade Tension Escalation</span>
+                <span class="scenario-probability">48%</span>
+              </div>
+              <div class="scenario-bar">
+                <div class="scenario-bar-fill" style="width: 48%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div id="gt-90d" class="tab-content">
+          <div class="scenario-list">
+            <div class="scenario-item">
+              <div class="scenario-header">
+                <span class="scenario-name">Economic Stability</span>
+                <span class="scenario-probability">65%</span>
+              </div>
+              <div class="scenario-bar">
+                <div class="scenario-bar-fill" style="width: 65%;"></div>
+              </div>
+            </div>
+            <div class="scenario-item">
+              <div class="scenario-header">
+                <span class="scenario-name">Social Unrest Risk</span>
+                <span class="scenario-probability">45%</span>
+              </div>
+              <div class="scenario-bar">
+                <div class="scenario-bar-fill" style="width: 45%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div id="gt-1y" class="tab-content">
+          <div class="scenario-list">
+            <div class="scenario-item">
+              <div class="scenario-header">
+                <span class="scenario-name">Long-term Stability</span>
+                <span class="scenario-probability">58%</span>
+              </div>
+              <div class="scenario-bar">
+                <div class="scenario-bar-fill" style="width: 58%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <button class="run-simulation-btn" onclick="runSimulation()">
+          <i data-lucide="play" style="width: 18px; height: 18px;"></i>
+          <span>Run New Simulation</span>
+        </button>
+      </section>
+    </div>
+
+    <!-- Two Column: Astrology & Pattern Mapping -->
+    <div class="two-column-equal">
+      <!-- Astrology Forecast Panel -->
+      <section class="panel">
+        <div class="panel-header">
+          <h2 class="panel-title">
+            <i data-lucide="sparkles" style="width: 20px; height: 20px;"></i>
+            Astrology Forecast
+          </h2>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Based on national chart</span>
+        </div>
+        
+        <div class="planet-grid">
+          <div class="planet-item">
+            <div class="planet-symbol">☉</div>
+            <div class="planet-name">Sun</div>
+            <div class="planet-position">15° Cap</div>
+          </div>
+          <div class="planet-item">
+            <div class="planet-symbol">☽</div>
+            <div class="planet-name">Moon</div>
+            <div class="planet-position">22° Ari</div>
+          </div>
+          <div class="planet-item">
+            <div class="planet-symbol">☿</div>
+            <div class="planet-name">Mercury</div>
+            <div class="planet-position">8° Cap</div>
+          </div>
+          <div class="planet-item">
+            <div class="planet-symbol">♀</div>
+            <div class="planet-name">Venus</div>
+            <div class="planet-position">3° Sag</div>
+          </div>
+        </div>
+        
+        <div style="margin-bottom: 16px;">
+          <h3 style="font-size: 0.875rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 12px;">Key Forecasts</h3>
+          <div class="forecast-item">
+            <div class="forecast-date">Jan 15 - Feb 3, 2026</div>
+            <div class="forecast-text">Mercury retrograde may impact communications and trade negotiations</div>
+          </div>
+          <div class="forecast-item">
+            <div class="forecast-date">Mar 20 - Apr 19, 2026</div>
+            <div class="forecast-text">Solar emphasis on economic restructuring and policy shifts</div>
+          </div>
+        </div>
+        
+        <div class="confidence-score">
+          <span class="confidence-label">Astrological Confidence</span>
+          <span class="confidence-value">68%</span>
+        </div>
+      </section>
+
+      <!-- Pattern Mapping Visualization -->
+      <section class="panel">
+        <div class="panel-header">
+          <h2 class="panel-title">
+            <i data-lucide="git-branch" style="width: 20px; height: 20px;"></i>
+            Pattern Recognition
+          </h2>
+        </div>
+        
+        <div class="pattern-chart-container">
+          <canvas id="pattern-chart"></canvas>
+        </div>
+        
+        <div class="pattern-list">
+          <div class="pattern-item">
+            <div class="pattern-match">
+              <div class="match-percentage">87%</div>
+              <div class="match-label">Match</div>
+            </div>
+            <div class="pattern-info">
+              <div class="pattern-name">Pre-election volatility pattern</div>
+              <div class="pattern-period">Similar to: 2020, 2016, 2008</div>
+            </div>
+          </div>
+          <div class="pattern-item">
+            <div class="pattern-match">
+              <div class="match-percentage">72%</div>
+              <div class="match-label">Match</div>
+            </div>
+            <div class="pattern-info">
+              <div class="pattern-name">Economic cycle downturn</div>
+              <div class="pattern-period">Similar to: 2008, 2001, 1991</div>
+            </div>
+          </div>
+          <div class="pattern-item">
+            <div class="pattern-match">
+              <div class="match-percentage">64%</div>
+              <div class="match-label">Match</div>
+            </div>
+            <div class="pattern-info">
+              <div class="pattern-name">Social movement emergence</div>
+              <div class="pattern-period">Similar to: 1968, 2011</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Authority Action Recommendations -->
+    <section class="panel">
+      <div class="panel-header">
+        <h2 class="panel-title">
+          <i data-lucide="clipboard-list" style="width: 20px; height: 20px;"></i>
+          Authority Action Recommendations
+        </h2>
+      </div>
+      
+      <div class="actions-tabs">
+        <button class="action-tab active" onclick="switchActionTab(this, 'country-actions')">Country Level</button>
+        <button class="action-tab" onclick="switchActionTab(this, 'state-actions')">State Level</button>
+        <button class="action-tab" onclick="switchActionTab(this, 'district-actions')">District/City Level</button>
+      </div>
+      
+      <div id="country-actions" class="tab-content active">
+        <div class="action-list">
+          <div class="action-item">
+            <div class="action-priority priority-critical"></div>
+            <div class="action-content">
+              <div class="action-title">Enhance Critical Infrastructure Protection</div>
+              <div class="action-description">Increase security measures for power grids, water systems, and transportation networks</div>
+              <div class="action-meta">
+                <span><i data-lucide="clock" style="width: 12px; height: 12px;"></i> 30 days</span>
+                <span><i data-lucide="dollar-sign" style="width: 12px; height: 12px;"></i> High cost</span>
+                <span><i data-lucide="users" style="width: 12px; height: 12px;"></i> Federal agencies</span>
+              </div>
+            </div>
+            <div class="action-checkbox" onclick="toggleAction(this)"></div>
+          </div>
+          
+          <div class="action-item">
+            <div class="action-priority priority-high"></div>
+            <div class="action-content">
+              <div class="action-title">Strengthen Cybersecurity Framework</div>
+              <div class="action-description">Implement advanced threat detection and response protocols across government systems</div>
+              <div class="action-meta">
+                <span><i data-lucide="clock" style="width: 12px; height: 12px;"></i> 60 days</span>
+                <span><i data-lucide="dollar-sign" style="width: 12px; height: 12px;"></i> Medium cost</span>
+                <span><i data-lucide="users" style="width: 12px; height: 12px;"></i> CISA, NSA</span>
+              </div>
+            </div>
+            <div class="action-checkbox" onclick="toggleAction(this)"></div>
+          </div>
+          
+          <div class="action-item">
+            <div class="action-priority priority-medium"></div>
+            <div class="action-content">
+              <div class="action-title">Review Trade Agreement Terms</div>
+              <div class="action-description">Assess current trade relationships and identify potential vulnerabilities</div>
+              <div class="action-meta">
+                <span><i data-lucide="clock" style="width: 12px; height: 12px;"></i> 90 days</span>
+                <span><i data-lucide="dollar-sign" style="width: 12px; height: 12px;"></i> Low cost</span>
+                <span><i data-lucide="users" style="width: 12px; height: 12px;"></i> Trade Office</span>
+              </div>
+            </div>
+            <div class="action-checkbox" onclick="toggleAction(this)"></div>
+          </div>
+          
+          <div class="action-item">
+            <div class="action-priority priority-low"></div>
+            <div class="action-content">
+              <div class="action-title">Update Public Health Surveillance</div>
+              <div class="action-description">Modernize disease tracking systems and improve inter-agency coordination</div>
+              <div class="action-meta">
+                <span><i data-lucide="clock" style="width: 12px; height: 12px;"></i> 120 days</span>
+                <span><i data-lucide="dollar-sign" style="width: 12px; height: 12px;"></i> Medium cost</span>
+                <span><i data-lucide="users" style="width: 12px; height: 12px;"></i> CDC, HHS</span>
+              </div>
+            </div>
+            <div class="action-checkbox" onclick="toggleAction(this)"></div>
+          </div>
+        </div>
+      </div>
+      
+      <div id="state-actions" class="tab-content">
+        <div class="action-list">
+          <div class="action-item">
+            <div class="action-priority priority-high"></div>
+            <div class="action-content">
+              <div class="action-title">Coordinate Emergency Response Plans</div>
+              <div class="action-description">Align state-level emergency protocols with federal guidelines</div>
+              <div class="action-meta">
+                <span><i data-lucide="clock" style="width: 12px; height: 12px;"></i> 45 days</span>
+                <span><i data-lucide="dollar-sign" style="width: 12px; height: 12px;"></i> Medium cost</span>
+                <span><i data-lucide="users" style="width: 12px; height: 12px;"></i> State Emergency Mgmt</span>
+              </div>
+            </div>
+            <div class="action-checkbox" onclick="toggleAction(this)"></div>
+          </div>
+          
+          <div class="action-item">
+            <div class="action-priority priority-medium"></div>
+            <div class="action-content">
+              <div class="action-title">Enhance Law Enforcement Intelligence Sharing</div>
+              <div class="action-description">Improve data sharing between state and local law enforcement agencies</div>
+              <div class="action-meta">
+                <span><i data-lucide="clock" style="width: 12px; height: 12px;"></i> 60 days</span>
+                <span><i data-lucide="dollar-sign" style="width: 12px; height: 12px;"></i> Low cost</span>
+                <span><i data-lucide="users" style="width: 12px; height: 12px;"></i> State Police</span>
+              </div>
+            </div>
+            <div class="action-checkbox" onclick="toggleAction(this)"></div>
+          </div>
+        </div>
+      </div>
+      
+      <div id="district-actions" class="tab-content">
+        <div class="action-list">
+          <div class="action-item">
+            <div class="action-priority priority-medium"></div>
+            <div class="action-content">
+              <div class="action-title">Conduct Community Resilience Workshops</div>
+              <div class="action-description">Organize local training sessions for emergency preparedness</div>
+              <div class="action-meta">
+                <span><i data-lucide="clock" style="width: 12px; height: 12px;"></i> 30 days</span>
+                <span><i data-lucide="dollar-sign" style="width: 12px; height: 12px;"></i> Low cost</span>
+                <span><i data-lucide="users" style="width: 12px; height: 12px;"></i> Local Gov</span>
+              </div>
+            </div>
+            <div class="action-checkbox" onclick="toggleAction(this)"></div>
+          </div>
+          
+          <div class="action-item">
+            <div class="action-priority priority-low"></div>
+            <div class="action-content">
+              <div class="action-title">Update Local Business Continuity Guidelines</div>
+              <div class="action-description">Provide resources for small businesses to prepare for disruptions</div>
+              <div class="action-meta">
+                <span><i data-lucide="clock" style="width: 12px; height: 12px;"></i> 90 days</span>
+                <span><i data-lucide="dollar-sign" style="width: 12px; height: 12px;"></i> Low cost</span>
+                <span><i data-lucide="users" style="width: 12px; height: 12px;"></i> Chamber of Commerce</span>
+              </div>
+            </div>
+            <div class="action-checkbox" onclick="toggleAction(this)"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-brand">
+        <div class="footer-logo">
+          <div class="logo">
+            <i data-lucide="globe" style="width: 24px; height: 24px;"></i>
+          </div>
+          <span style="font-weight: 700; font-size: 1.25rem;">GeoForecast</span>
+        </div>
+        <p class="footer-tagline">Global threat intelligence and predictive analytics for a safer world.</p>
+      </div>
+      <div class="footer-column">
+        <h4>Platform</h4>
+        <div class="footer-links">
+          <a href="index.html">Global Overview</a>
+          <a href="predictions.html">Predictions</a>
+          <a href="timeline.html">Timeline</a>
+          <a href="alerts.html">Alerts</a>
+        </div>
+      </div>
+      <div class="footer-column">
+        <h4>Resources</h4>
+        <div class="footer-links">
+          <a href="#docs">Documentation</a>
+          <a href="#api">API Reference</a>
+          <a href="#support">Support</a>
+          <a href="#contact">Contact</a>
+        </div>
+      </div>
+      <div class="footer-column">
+        <h4>Legal</h4>
+        <div class="footer-links">
+          <a href="#privacy">Privacy Policy</a>
+          <a href="#terms">Terms of Service</a>
+          <a href="#cookies">Cookie Policy</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 GeoForecast. All rights reserved.</span>
+      <span>Data updated: Just now</span>
+    </div>
+  </footer>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="loading-spinner"></div>
+  </div>
+
+  <script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+    
+    // Country data
+    const countryData = {
+      US: { name: 'United States', flag: '🇺🇸', region: 'North America', population: '331.9M', threatScore: 62 },
+      CN: { name: 'China', flag: '🇨🇳', region: 'Asia', population: '1.4B', threatScore: 58 },
+      RU: { name: 'Russia', flag: '🇷🇺', region: 'Europe/Asia', population: '146M', threatScore: 74 },
+      GB: { name: 'United Kingdom', flag: '🇬🇧', region: 'Europe', population: '67M', threatScore: 45 },
+      DE: { name: 'Germany', flag: '🇩🇪', region: 'Europe', population: '83M', threatScore: 42 },
+      FR: { name: 'France', flag: '🇫🇷', region: 'Europe', population: '68M', threatScore: 48 },
+      JP: { name: 'Japan', flag: '🇯🇵', region: 'Asia', population: '125M', threatScore: 38 },
+      IN: { name: 'India', flag: '🇮🇳', region: 'Asia', population: '1.4B', threatScore: 55 },
+      BR: { name: 'Brazil', flag: '🇧🇷', region: 'South America', population: '215M', threatScore: 61 },
+      CA: { name: 'Canada', flag: '🇨🇦', region: 'North America', population: '38M', threatScore: 35 }
+    };
+    
+    // Get URL parameters
+    function getUrlParam(param) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(param);
+    }
+    
+    // Load country data
+    function loadCountryData() {
+      const countryCode = getUrlParam('country') || 'US';
+      const data = countryData[countryCode] || countryData['US'];
+      
+      document.getElementById('country-name').textContent = data.name;
+      document.getElementById('country-flag').textContent = data.flag;
+      document.getElementById('iso-code').textContent = countryCode;
+      document.getElementById('region').textContent = data.region;
+      document.getElementById('population').textContent = data.population + ' population';
+      
+      // Update threat score
+      const score = data.threatScore;
+      document.getElementById('threat-score').textContent = score;
+      
+      // Update progress circle
+      const circumference = 2 * Math.PI * 45;
+      const offset = circumference - (score / 100) * circumference;
+      setTimeout(() => {
+        document.getElementById('threat-progress').style.strokeDashoffset = offset;
+      }, 300);
+      
+      // Set color based on score
+      const progressEl = document.getElementById('threat-progress');
+      const scoreEl = document.getElementById('threat-score');
+      if (score >= 75) {
+        progressEl.setAttribute('stroke', 'var(--alert-critical)');
+        scoreEl.style.color = 'var(--alert-critical)';
+      } else if (score >= 50) {
+        progressEl.setAttribute('stroke', 'var(--alert-high)');
+        scoreEl.style.color = 'var(--alert-high)';
+      } else if (score >= 25) {
+        progressEl.setAttribute('stroke', 'var(--alert-medium)');
+        scoreEl.style.color = 'var(--alert-medium)';
+      } else {
+        progressEl.setAttribute('stroke', 'var(--alert-low)');
+        scoreEl.style.color = 'var(--alert-low)';
+      }
+    }
+    
+    // Animate metric values
+    function animateMetrics() {
+      const metrics = document.querySelectorAll('.metric-value[data-count]');
+      metrics.forEach((metric, index) => {
+        const target = parseInt(metric.getAttribute('data-count'));
+        const duration = 800;
+        const start = performance.now();
+        
+        setTimeout(() => {
+          function update(currentTime) {
+            const elapsed = currentTime - start;
+            const progress = Math.min(elapsed / duration, 1);
+            const easeOut = 1 - Math.pow(1 - progress, 3);
+            const current = Math.round(target * easeOut);
+            metric.textContent = current;
+            
+            if (progress < 1) {
+              requestAnimationFrame(update);
+            }
+          }
+          requestAnimationFrame(update);
+        }, index * 100);
+      });
+    }
+    
+    // Show metric cards with animation
+    function showMetricCards() {
+      const cards = document.querySelectorAll('.metric-card');
+      cards.forEach((card, index) => {
+        setTimeout(() => {
+          card.classList.add('visible');
+        }, index * 50);
+      });
+    }
+    
+    // Create mini charts
+    function createMiniCharts() {
+      const charts = ['crime-chart', 'health-chart', 'economic-chart'];
+      const colors = ['#DC2626', '#14B8A6', '#7C3AED'];
+      
+      charts.forEach((id, index) => {
+        const canvas = document.getElementById(id);
+        if (!canvas) return;
+        
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
+        
+        // Generate random data
+        const data = Array.from({ length: 12 }, () => Math.random() * 40 + 30);
+        const max = Math.max(...data);
+        const min = Math.min(...data);
+        const range = max - min || 1;
+        
+        const width = rect.width;
+        const height = rect.height;
+        const step = width / (data.length - 1);
+        
+        ctx.beginPath();
+        ctx.strokeStyle = colors[index];
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        
+        data.forEach((value, i) => {
+          const x = i * step;
+          const y = height - ((value - min) / range) * (height - 10) - 5;
+          if (i === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        });
+        
+        ctx.stroke();
+        
+        // Add gradient fill
+        ctx.lineTo(width, height);
+        ctx.lineTo(0, height);
+        ctx.closePath();
+        const gradient = ctx.createLinearGradient(0, 0, 0, height);
+        gradient.addColorStop(0, colors[index] + '40');
+        gradient.addColorStop(1, colors[index] + '00');
+        ctx.fillStyle = gradient;
+        ctx.fill();
+      });
+    }
+    
+    // Create pattern chart
+    function createPatternChart() {
+      const canvas = document.getElementById('pattern-chart');
+      if (!canvas) return;
+      
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
+      
+      const width = rect.width;
+      const height = rect.height;
+      
+      // Draw historical pattern line
+      ctx.beginPath();
+      ctx.strokeStyle = '#7C3AED';
+      ctx.lineWidth = 2;
+      
+      const historicalData = [30, 35, 42, 38, 45, 52, 48, 55, 62, 58, 65, 70];
+      const step = width / (historicalData.length - 1);
+      
+      historicalData.forEach((value, i) => {
+        const x = i * step;
+        const y = height - (value / 100) * height;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      
+      ctx.stroke();
+      
+      // Draw current trajectory (dashed)
+      ctx.beginPath();
+      ctx.strokeStyle = '#F97316';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      
+      const lastX = (historicalData.length - 1) * step;
+      const lastY = height - (historicalData[historicalData.length - 1] / 100) * height;
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(lastX + step * 2, height - 75 / 100 * height);
+      ctx.lineTo(lastX + step * 4, height - 82 / 100 * height);
+      
+      ctx.stroke();
+      ctx.setLineDash([]);
+      
+      // Add labels
+      ctx.fillStyle = '#718096';
+      ctx.font = '10px Inter';
+      ctx.fillText('Historical', 10, 15);
+      ctx.fillStyle = '#F97316';
+      ctx.fillText('Projected', 10, 30);
+    }
+    
+    // Tab switching
+    function switchTab(tab, contentId) {
+      // Update tab buttons
+      const tabs = tab.parentElement.querySelectorAll('.tab');
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      
+      // Update content
+      const contents = tab.closest('.panel').querySelectorAll('.tab-content');
+      contents.forEach(c => c.classList.remove('active'));
+      document.getElementById(contentId).classList.add('active');
+    }
+    
+    // Action tab switching
+    function switchActionTab(tab, contentId) {
+      const tabs = tab.parentElement.querySelectorAll('.action-tab');
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      
+      const contents = tab.closest('.panel').querySelectorAll('.tab-content');
+      contents.forEach(c => c.classList.remove('active'));
+      document.getElementById(contentId).classList.add('active');
+    }
+    
+    // Navigate to city
+    function navigateToCity(cityName, countryCode) {
+      window.location.href = `city.html?city=${encodeURIComponent(cityName)}&country=${countryCode}`;
+    }
+    
+    // Expand metric
+    function expandMetric(metricType) {
+      alert(`Expanding ${metricType} metric details...`);
+    }
+    
+    // Share country
+    function shareCountry() {
+      const countryCode = getUrlParam('country') || 'US';
+      const url = window.location.href;
+      if (navigator.share) {
+        navigator.share({
+          title: `GeoForecast - ${countryData[countryCode]?.name || 'Country'} Analysis`,
+          url: url
+        });
+      } else {
+        navigator.clipboard.writeText(url);
+        alert('Link copied to clipboard!');
+      }
+    }
+    
+    // Export data
+    function exportData() {
+      const countryCode = getUrlParam('country') || 'US';
+      const data = {
+        country: countryData[countryCode],
+        exportDate: new Date().toISOString(),
+        metrics: {
+          crime: 58,
+          health: 72,
+          economic: 65
+        }
+      };
+      
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `geoforecast-${countryCode.toLowerCase()}-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    
+    // Toggle subscription
+    let isSubscribed = false;
+    function toggleSubscription() {
+      isSubscribed = !isSubscribed;
+      const btn = document.getElementById('subscribe-text');
+      btn.textContent = isSubscribed ? 'Subscribed' : 'Subscribe';
+      alert(isSubscribed ? 'Subscribed to alerts for this country!' : 'Unsubscribed from alerts.');
+    }
+    
+    // Run simulation
+    function runSimulation() {
+      const overlay = document.getElementById('loading-overlay');
+      overlay.classList.add('active');
+      
+      setTimeout(() => {
+        overlay.classList.remove('active');
+        alert('Simulation complete! Results updated.');
+      }, 2000);
+    }
+    
+    // Toggle action checkbox
+    function toggleAction(checkbox) {
+      checkbox.classList.toggle('checked');
+      if (checkbox.classList.contains('checked')) {
+        checkbox.innerHTML = '<i data-lucide="check" style="width: 14px; height: 14px;"></i>';
+        lucide.createIcons();
+      } else {
+        checkbox.innerHTML = '';
+      }
+    }
+    
+    // Change page
+    function changePage(direction) {
+      alert('Pagination: Page ' + (direction > 0 ? 'next' : 'previous'));
+    }
+    
+    // City search filter
+    document.getElementById('city-search')?.addEventListener('input', function(e) {
+      const searchTerm = e.target.value.toLowerCase();
+      const rows = document.querySelectorAll('#city-list tr');
+      
+      rows.forEach(row => {
+        const cityName = row.querySelector('.city-name')?.textContent.toLowerCase() || '';
+        row.style.display = cityName.includes(searchTerm) ? '' : 'none';
+      });
+    });
+    
+    // Threat filter
+    document.getElementById('threat-filter')?.addEventListener('change', function(e) {
+      const filter = e.target.value;
+      const rows = document.querySelectorAll('#city-list tr');
+      
+      rows.forEach(row => {
+        const badge = row.querySelector('.threat-badge');
+        if (!badge) return;
+        
+        const threatLevel = badge.textContent.toLowerCase();
+        if (filter === 'all' || threatLevel === filter) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    });
+    
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', function() {
+      loadCountryData();
+      showMetricCards();
+      animateMetrics();
+      createMiniCharts();
+      createPatternChart();
+      
+      // Update last updated time
+      const now = new Date();
+      document.getElementById('last-updated').textContent = now.toLocaleTimeString();
+    });
+    
+    // Handle resize
+    window.addEventListener('resize', function() {
+      createMiniCharts();
+      createPatternChart();
+    });
+  </script>
+</body>
+</html>

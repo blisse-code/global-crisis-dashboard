@@ -1,0 +1,2435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Predictions Hub | Geopolitical Forecast Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="../shared/styles.css">
+  <style>
+    /* Page-specific styles */
+    .predictions-page {
+      padding: var(--space-6);
+    }
+
+    /* Tab Styles */
+    .methodology-tabs {
+      display: flex;
+      gap: var(--space-2);
+      background: var(--color-card-bg);
+      padding: var(--space-2);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-md);
+      position: sticky;
+      top: var(--header-height);
+      z-index: 50;
+      margin-bottom: var(--space-6);
+    }
+
+    .methodology-tab {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-2);
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--radius-lg);
+      font-weight: var(--font-medium);
+      color: var(--color-text-secondary);
+      transition: var(--transition-fast);
+      cursor: pointer;
+      border: none;
+      background: transparent;
+    }
+
+    .methodology-tab:hover {
+      background: var(--color-bg-alt);
+      color: var(--color-text-primary);
+    }
+
+    .methodology-tab.is-active {
+      background: var(--color-primary);
+      color: var(--color-text-light);
+    }
+
+    .methodology-tab svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    /* Tab Content */
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .tab-content.is-active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Game Theory Panel */
+    .simulation-panel {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: var(--space-6);
+    }
+
+    .simulation-controls {
+      background: var(--color-card-bg);
+      border-radius: var(--radius-xl);
+      padding: var(--card-padding);
+      box-shadow: var(--shadow-md);
+    }
+
+    .control-group {
+      margin-bottom: var(--space-4);
+    }
+
+    .control-label {
+      display: block;
+      font-size: var(--text-body-sm);
+      font-weight: var(--font-medium);
+      color: var(--color-text-secondary);
+      margin-bottom: var(--space-2);
+    }
+
+    .control-select {
+      width: 100%;
+      padding: var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: var(--color-card-bg);
+      font-size: var(--text-body);
+      transition: var(--transition-fast);
+    }
+
+    .control-select:focus {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.1);
+    }
+
+    .actor-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      margin-top: var(--space-3);
+    }
+
+    .actor-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3);
+      background: var(--color-bg-alt);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: var(--transition-fast);
+    }
+
+    .actor-item:hover {
+      background: rgba(var(--color-primary-rgb), 0.1);
+    }
+
+    .actor-item.is-selected {
+      background: rgba(var(--color-primary-rgb), 0.15);
+      border: 1px solid var(--color-primary);
+    }
+
+    .actor-flag {
+      width: 32px;
+      height: 24px;
+      border-radius: var(--radius-sm);
+      object-fit: cover;
+    }
+
+    .actor-name {
+      font-weight: var(--font-medium);
+      flex: 1;
+    }
+
+    .actor-state {
+      width: 12px;
+      height: 12px;
+      border-radius: var(--radius-full);
+    }
+
+    .actor-state.cooperative { background: var(--color-alert-low); }
+    .actor-state.neutral { background: var(--color-alert-medium); }
+    .actor-state.aggressive { background: var(--color-alert-critical); }
+
+    /* Visualization Area */
+    .visualization-area {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+    }
+
+    .viz-card {
+      background: var(--color-card-bg);
+      border-radius: var(--radius-xl);
+      padding: var(--card-padding);
+      box-shadow: var(--shadow-md);
+    }
+
+    .viz-card__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-4);
+    }
+
+    .viz-card__title {
+      font-size: var(--text-h5);
+      font-weight: var(--font-semibold);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .viz-card__title svg {
+      width: 20px;
+      height: 20px;
+      color: var(--color-primary);
+    }
+
+    /* Payoff Matrix */
+    .payoff-matrix {
+      display: grid;
+      grid-template-columns: auto repeat(3, 1fr);
+      gap: var(--space-2);
+      margin-top: var(--space-4);
+    }
+
+    .matrix-header {
+      font-weight: var(--font-semibold);
+      text-align: center;
+      padding: var(--space-2);
+      color: var(--color-text-secondary);
+    }
+
+    .matrix-row-header {
+      font-weight: var(--font-semibold);
+      padding: var(--space-2);
+      color: var(--color-text-secondary);
+      display: flex;
+      align-items: center;
+    }
+
+    .matrix-cell {
+      background: var(--color-bg-alt);
+      border-radius: var(--radius-md);
+      padding: var(--space-3);
+      text-align: center;
+      transition: var(--transition-fast);
+      position: relative;
+    }
+
+    .matrix-cell:hover {
+      background: rgba(var(--color-primary-rgb), 0.1);
+    }
+
+    .matrix-cell.is-equilibrium {
+      background: rgba(34, 197, 94, 0.15);
+      border: 2px solid var(--color-alert-low);
+    }
+
+    .matrix-cell.is-equilibrium::after {
+      content: '';
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      width: 20px;
+      height: 20px;
+      background: var(--color-alert-low);
+      border-radius: var(--radius-full);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .payoff-value {
+      font-size: var(--text-h4);
+      font-weight: var(--font-bold);
+      color: var(--color-text-primary);
+    }
+
+    .payoff-label {
+      font-size: var(--text-caption);
+      color: var(--color-text-muted);
+    }
+
+    /* Nash Equilibrium Indicator */
+    .nash-indicator {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-4);
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%);
+      border-radius: var(--radius-lg);
+      border-left: 4px solid var(--color-alert-low);
+    }
+
+    .nash-indicator svg {
+      width: 24px;
+      height: 24px;
+      color: var(--color-alert-low);
+    }
+
+    .nash-indicator__text {
+      flex: 1;
+    }
+
+    .nash-indicator__title {
+      font-weight: var(--font-semibold);
+      color: var(--color-text-primary);
+    }
+
+    .nash-indicator__desc {
+      font-size: var(--text-body-sm);
+      color: var(--color-text-secondary);
+    }
+
+    /* Simulation Progress */
+    .simulation-progress {
+      display: none;
+      padding: var(--space-6);
+      text-align: center;
+    }
+
+    .simulation-progress.is-running {
+      display: block;
+    }
+
+    .progress-ring {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto var(--space-4);
+      position: relative;
+    }
+
+    .progress-ring svg {
+      transform: rotate(-90deg);
+    }
+
+    .progress-ring__circle {
+      fill: none;
+      stroke: var(--color-border);
+      stroke-width: 8;
+    }
+
+    .progress-ring__progress {
+      fill: none;
+      stroke: var(--color-primary);
+      stroke-width: 8;
+      stroke-linecap: round;
+      stroke-dasharray: 220;
+      stroke-dashoffset: 220;
+      transition: stroke-dashoffset 0.3s ease-out;
+    }
+
+    .progress-ring__text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: var(--text-h5);
+      font-weight: var(--font-bold);
+      color: var(--color-primary);
+    }
+
+    /* Astrology Calendar */
+    .astrology-calendar {
+      display: grid;
+      grid-template-columns: 1fr 350px;
+      gap: var(--space-6);
+    }
+
+    .calendar-grid {
+      background: var(--color-card-bg);
+      border-radius: var(--radius-xl);
+      padding: var(--card-padding);
+      box-shadow: var(--shadow-md);
+    }
+
+    .calendar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-4);
+    }
+
+    .calendar-nav {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .calendar-nav button {
+      padding: var(--space-2);
+      border-radius: var(--radius-md);
+      background: var(--color-bg-alt);
+      transition: var(--transition-fast);
+    }
+
+    .calendar-nav button:hover {
+      background: var(--color-primary);
+      color: var(--color-text-light);
+    }
+
+    .calendar-month {
+      font-size: var(--text-h4);
+      font-weight: var(--font-semibold);
+    }
+
+    .calendar-days {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: var(--space-1);
+    }
+
+    .calendar-day-header {
+      text-align: center;
+      padding: var(--space-2);
+      font-size: var(--text-caption);
+      font-weight: var(--font-semibold);
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+    }
+
+    .calendar-day {
+      aspect-ratio: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-1);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: var(--transition-fast);
+      position: relative;
+    }
+
+    .calendar-day:hover {
+      background: var(--color-bg-alt);
+    }
+
+    .calendar-day.is-today {
+      background: rgba(var(--color-primary-rgb), 0.1);
+      font-weight: var(--font-bold);
+    }
+
+    .calendar-day.is-prediction {
+      background: rgba(124, 58, 237, 0.1);
+    }
+
+    .calendar-day.is-retrograde::before {
+      content: '';
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 6px;
+      height: 6px;
+      background: var(--color-alert-high);
+      border-radius: var(--radius-full);
+    }
+
+    .calendar-day__number {
+      font-size: var(--text-body-sm);
+    }
+
+    .calendar-day__marker {
+      display: flex;
+      gap: 2px;
+      margin-top: 2px;
+    }
+
+    .day-marker {
+      width: 4px;
+      height: 4px;
+      border-radius: var(--radius-full);
+    }
+
+    /* Planetary Positions */
+    .planetary-positions {
+      background: var(--color-card-bg);
+      border-radius: var(--radius-xl);
+      padding: var(--card-padding);
+      box-shadow: var(--shadow-md);
+    }
+
+    .planet-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      margin-top: var(--space-4);
+    }
+
+    .planet-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3);
+      background: var(--color-bg-alt);
+      border-radius: var(--radius-md);
+    }
+
+    .planet-symbol {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-full);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--text-h5);
+      font-weight: var(--font-bold);
+    }
+
+    .planet-symbol.sun { background: rgba(255, 193, 7, 0.2); color: #FFC107; }
+    .planet-symbol.moon { background: rgba(192, 192, 192, 0.2); color: #C0C0C0; }
+    .planet-symbol.mercury { background: rgba(121, 85, 72, 0.2); color: #795548; }
+    .planet-symbol.venus { background: rgba(233, 30, 99, 0.2); color: #E91E63; }
+    .planet-symbol.mars { background: rgba(244, 67, 54, 0.2); color: #F44336; }
+    .planet-symbol.jupiter { background: rgba(255, 152, 0, 0.2); color: #FF9800; }
+    .planet-symbol.saturn { background: rgba(96, 125, 139, 0.2); color: #607D8B; }
+
+    .planet-info {
+      flex: 1;
+    }
+
+    .planet-name {
+      font-weight: var(--font-medium);
+      color: var(--color-text-primary);
+    }
+
+    .planet-position {
+      font-size: var(--text-caption);
+      color: var(--color-text-muted);
+    }
+
+    .planet-aspect {
+      font-size: var(--text-caption);
+      padding: var(--space-1) var(--space-2);
+      border-radius: var(--radius-full);
+    }
+
+    .planet-aspect.positive {
+      background: rgba(34, 197, 94, 0.1);
+      color: var(--color-alert-low);
+    }
+
+    .planet-aspect.challenging {
+      background: rgba(220, 38, 38, 0.1);
+      color: var(--color-alert-critical);
+    }
+
+    .planet-aspect.neutral {
+      background: rgba(59, 130, 246, 0.1);
+      color: var(--color-alert-info);
+    }
+
+    /* Pattern Recognition */
+    .pattern-panel {
+      display: grid;
+      grid-template-columns: 250px 1fr;
+      gap: var(--space-6);
+    }
+
+    .pattern-selector {
+      background: var(--color-card-bg);
+      border-radius: var(--radius-xl);
+      padding: var(--card-padding);
+      box-shadow: var(--shadow-md);
+    }
+
+    .pattern-type-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      margin-top: var(--space-4);
+    }
+
+    .pattern-type {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: var(--transition-fast);
+    }
+
+    .pattern-type:hover {
+      background: var(--color-bg-alt);
+    }
+
+    .pattern-type.is-active {
+      background: rgba(var(--color-primary-rgb), 0.1);
+      border-left: 3px solid var(--color-primary);
+    }
+
+    .pattern-type__icon {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .pattern-type__icon svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .pattern-type__info {
+      flex: 1;
+    }
+
+    .pattern-type__name {
+      font-weight: var(--font-medium);
+      font-size: var(--text-body-sm);
+    }
+
+    .pattern-type__count {
+      font-size: var(--text-caption);
+      color: var(--color-text-muted);
+    }
+
+    .pattern-confidence {
+      font-size: var(--text-caption);
+      font-weight: var(--font-semibold);
+      padding: var(--space-1) var(--space-2);
+      border-radius: var(--radius-full);
+    }
+
+    .pattern-confidence.high {
+      background: rgba(34, 197, 94, 0.1);
+      color: var(--color-alert-low);
+    }
+
+    .pattern-confidence.medium {
+      background: rgba(234, 179, 8, 0.1);
+      color: var(--color-alert-medium);
+    }
+
+    .pattern-confidence.low {
+      background: rgba(249, 115, 22, 0.1);
+      color: var(--color-alert-high);
+    }
+
+    /* Pattern Visualization */
+    .pattern-viz {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+    }
+
+    .pattern-chart-container {
+      background: var(--color-card-bg);
+      border-radius: var(--radius-xl);
+      padding: var(--card-padding);
+      box-shadow: var(--shadow-md);
+      min-height: 400px;
+    }
+
+    .pattern-matches {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-4);
+    }
+
+    .pattern-match-card {
+      background: var(--color-card-bg);
+      border-radius: var(--radius-xl);
+      padding: var(--card-padding);
+      box-shadow: var(--shadow-md);
+      transition: var(--transition-fast);
+      cursor: pointer;
+    }
+
+    .pattern-match-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .pattern-match-card__period {
+      font-size: var(--text-caption);
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-2);
+    }
+
+    .pattern-match-card__title {
+      font-weight: var(--font-semibold);
+      margin-bottom: var(--space-2);
+    }
+
+    .pattern-match-card__similarity {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .similarity-bar {
+      flex: 1;
+      height: 6px;
+      background: var(--color-border);
+      border-radius: var(--radius-full);
+      overflow: hidden;
+    }
+
+    .similarity-fill {
+      height: 100%;
+      background: var(--color-primary);
+      border-radius: var(--radius-full);
+      transition: width 0.5s ease-out;
+    }
+
+    .similarity-value {
+      font-size: var(--text-caption);
+      font-weight: var(--font-semibold);
+      color: var(--color-primary);
+    }
+
+    /* Confidence Dashboard */
+    .confidence-dashboard {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-4);
+      margin-top: var(--space-8);
+    }
+
+    .confidence-card {
+      background: var(--color-card-bg);
+      border-radius: var(--radius-xl);
+      padding: var(--card-padding);
+      box-shadow: var(--shadow-md);
+      text-align: center;
+    }
+
+    .confidence-card__label {
+      font-size: var(--text-caption);
+      font-weight: var(--font-semibold);
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: var(--tracking-overline);
+      margin-bottom: var(--space-3);
+    }
+
+    .confidence-card__value {
+      font-size: var(--text-h2);
+      font-weight: var(--font-bold);
+      margin-bottom: var(--space-2);
+    }
+
+    .confidence-card__trend {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-1);
+      font-size: var(--text-body-sm);
+    }
+
+    .confidence-card__trend.up {
+      color: var(--color-alert-low);
+    }
+
+    .confidence-card__trend.down {
+      color: var(--color-alert-critical);
+    }
+
+    /* Historical Accuracy */
+    .accuracy-section {
+      margin-top: var(--space-8);
+    }
+
+    .accuracy-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-4);
+      margin-top: var(--space-4);
+    }
+
+    .accuracy-card {
+      background: var(--color-card-bg);
+      border-radius: var(--radius-xl);
+      padding: var(--card-padding);
+      box-shadow: var(--shadow-md);
+    }
+
+    .accuracy-card__header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin-bottom: var(--space-4);
+    }
+
+    .accuracy-card__icon {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .accuracy-card__icon svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .accuracy-card__title {
+      font-weight: var(--font-semibold);
+    }
+
+    .accuracy-card__subtitle {
+      font-size: var(--text-caption);
+      color: var(--color-text-muted);
+    }
+
+    .accuracy-metrics {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .accuracy-metric {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .accuracy-metric__label {
+      font-size: var(--text-body-sm);
+      color: var(--color-text-secondary);
+    }
+
+    .accuracy-metric__value {
+      font-weight: var(--font-semibold);
+    }
+
+    .accuracy-bar {
+      width: 100%;
+      height: 8px;
+      background: var(--color-border);
+      border-radius: var(--radius-full);
+      overflow: hidden;
+      margin-top: var(--space-1);
+    }
+
+    .accuracy-fill {
+      height: 100%;
+      border-radius: var(--radius-full);
+      transition: width 0.5s ease-out;
+    }
+
+    /* Combined View */
+    .combined-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-6);
+    }
+
+    .combined-card {
+      background: var(--color-card-bg);
+      border-radius: var(--radius-xl);
+      padding: var(--card-padding);
+      box-shadow: var(--shadow-md);
+    }
+
+    .prediction-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      margin-top: var(--space-4);
+    }
+
+    .prediction-item {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-3);
+      padding: var(--space-3);
+      background: var(--color-bg-alt);
+      border-radius: var(--radius-md);
+      transition: var(--transition-fast);
+    }
+
+    .prediction-item:hover {
+      background: rgba(var(--color-primary-rgb), 0.05);
+    }
+
+    .prediction-item__confidence {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-full);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--text-caption);
+      font-weight: var(--font-bold);
+      flex-shrink: 0;
+    }
+
+    .prediction-item__confidence.high {
+      background: rgba(34, 197, 94, 0.15);
+      color: var(--color-alert-low);
+    }
+
+    .prediction-item__confidence.medium {
+      background: rgba(234, 179, 8, 0.15);
+      color: var(--color-alert-medium);
+    }
+
+    .prediction-item__confidence.low {
+      background: rgba(249, 115, 22, 0.15);
+      color: var(--color-alert-high);
+    }
+
+    .prediction-item__content {
+      flex: 1;
+    }
+
+    .prediction-item__title {
+      font-weight: var(--font-medium);
+      margin-bottom: var(--space-1);
+    }
+
+    .prediction-item__meta {
+      display: flex;
+      gap: var(--space-3);
+      font-size: var(--text-caption);
+      color: var(--color-text-muted);
+    }
+
+    .prediction-item__methods {
+      display: flex;
+      gap: var(--space-1);
+      margin-top: var(--space-2);
+    }
+
+    .method-badge {
+      padding: var(--space-1) var(--space-2);
+      border-radius: var(--radius-full);
+      font-size: var(--text-caption);
+    }
+
+    .method-badge.game-theory {
+      background: rgba(30, 58, 95, 0.1);
+      color: var(--color-primary);
+    }
+
+    .method-badge.astrology {
+      background: rgba(184, 134, 11, 0.1);
+      color: var(--color-text-gold);
+    }
+
+    .method-badge.pattern {
+      background: rgba(124, 58, 237, 0.1);
+      color: var(--color-secondary);
+    }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .simulation-panel,
+      .astrology-calendar,
+      .pattern-panel {
+        grid-template-columns: 1fr;
+      }
+
+      .confidence-dashboard {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .combined-grid,
+      .accuracy-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .pattern-matches {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .methodology-tabs {
+        flex-wrap: wrap;
+      }
+
+      .methodology-tab {
+        flex: 1 1 45%;
+      }
+
+      .confidence-dashboard {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Chart containers */
+    .chart-container {
+      position: relative;
+      height: 300px;
+      width: 100%;
+    }
+
+    .chart-container--small {
+      height: 200px;
+    }
+
+    .chart-container--large {
+      height: 400px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Mobile Menu Toggle -->
+  <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+    <i data-lucide="menu" class="mobile-menu-toggle__icon"></i>
+  </button>
+
+  <!-- Sidebar Overlay -->
+  <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+  <!-- Sidebar Navigation -->
+  <aside id="sidebar" class="sidebar" role="navigation" aria-label="Main navigation">
+    <div class="sidebar__header">
+      <a href="index.html" class="sidebar__logo">
+        <div class="sidebar__logo-icon">
+          <svg viewBox="0 0 100 100" width="40" height="40" aria-hidden="true">
+            <circle cx="50" cy="50" r="45" fill="#1E3A5F"/>
+            <circle cx="50" cy="50" r="35" fill="none" stroke="#7C3AED" stroke-width="3"/>
+            <circle cx="50" cy="50" r="15" fill="#7C3AED"/>
+          </svg>
+        </div>
+        <div class="sidebar__logo-text">
+          <span class="sidebar__logo-title">GeoForecast</span>
+          <span class="sidebar__logo-subtitle">Threat Intelligence</span>
+        </div>
+      </a>
+      <button id="sidebar-close" class="sidebar__close" aria-label="Close navigation menu">
+        <i data-lucide="x" class="sidebar__close-icon"></i>
+      </button>
+    </div>
+
+    <nav class="sidebar__nav">
+      <ul class="sidebar__menu" role="menubar">
+        <li class="sidebar__item" role="none">
+          <a href="index.html" class="sidebar__link" data-page="index" role="menuitem">
+            <span class="sidebar__link-icon"><i data-lucide="globe" aria-hidden="true"></i></span>
+            <span class="sidebar__link-text">Global Overview</span>
+          </a>
+        </li>
+        <li class="sidebar__item" role="none">
+          <a href="predictions.html" class="sidebar__link is-active" data-page="predictions" role="menuitem" aria-current="page">
+            <span class="sidebar__link-icon"><i data-lucide="brain" aria-hidden="true"></i></span>
+            <span class="sidebar__link-text">Predictions</span>
+          </a>
+        </li>
+        <li class="sidebar__item" role="none">
+          <a href="timeline.html" class="sidebar__link" data-page="timeline" role="menuitem">
+            <span class="sidebar__link-icon"><i data-lucide="calendar" aria-hidden="true"></i></span>
+            <span class="sidebar__link-text">Timeline</span>
+          </a>
+        </li>
+        <li class="sidebar__item" role="none">
+          <a href="alerts.html" class="sidebar__link" data-page="alerts" role="menuitem">
+            <span class="sidebar__link-icon"><i data-lucide="bell" aria-hidden="true"></i></span>
+            <span class="sidebar__link-text">Alert Center</span>
+            <span id="alert-badge" class="sidebar__badge" aria-label="Unread alerts">3</span>
+          </a>
+        </li>
+        <li class="sidebar__item" role="none">
+          <a href="settings.html" class="sidebar__link" data-page="settings" role="menuitem">
+            <span class="sidebar__link-icon"><i data-lucide="settings" aria-hidden="true"></i></span>
+            <span class="sidebar__link-text">Settings</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <div class="sidebar__footer">
+      <div class="sidebar__bandwidth" id="bandwidth-indicator">
+        <span class="sidebar__bandwidth-label">Mode:</span>
+        <span class="sidebar__bandwidth-value" id="bandwidth-value">High</span>
+      </div>
+      <div class="sidebar__user">
+        <div class="sidebar__user-avatar">
+          <i data-lucide="user" aria-hidden="true"></i>
+        </div>
+        <div class="sidebar__user-info">
+          <span class="sidebar__user-name">Guest User</span>
+          <span class="sidebar__user-role">Analyst</span>
+        </div>
+      </div>
+      <div class="sidebar__version">
+        <span>v1.0.0</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="predictions-page">
+      <!-- Page Header -->
+      <header class="page-header" style="margin-bottom: var(--space-6);">
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: var(--space-4);">
+          <div>
+            <h1 style="font-size: var(--text-h2); font-weight: var(--font-bold); margin-bottom: var(--space-2);">
+              <i data-lucide="brain" style="width: 32px; height: 32px; display: inline-block; vertical-align: middle; margin-right: var(--space-2); color: var(--color-primary);"></i>
+              Predictions Hub
+            </h1>
+            <p style="color: var(--color-text-secondary); font-size: var(--text-body-lg);">
+              Multi-dimensional forecasting analysis using game theory, astrology, and pattern recognition
+            </p>
+          </div>
+          <div style="display: flex; gap: var(--space-4); align-items: center;">
+            <div style="text-align: right;">
+              <div style="font-size: var(--text-caption); color: var(--color-text-muted);">Last Simulation</div>
+              <div style="font-weight: var(--font-medium);">2 hours ago</div>
+            </div>
+            <div class="progress-circle" style="width: 80px; height: 80px;">
+              <svg class="progress-circle__svg" width="80" height="80" viewBox="0 0 100 100">
+                <circle class="progress-circle__track" cx="50" cy="50" r="45"/>
+                <circle class="progress-circle__fill" cx="50" cy="50" r="45" style="stroke-dashoffset: 70; stroke: var(--color-primary);"/>
+              </svg>
+              <div class="progress-circle__value" style="font-size: var(--text-body);">78%</div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Methodology Tabs -->
+      <div class="methodology-tabs" role="tablist" aria-label="Prediction methodologies">
+        <button class="methodology-tab is-active" role="tab" aria-selected="true" aria-controls="game-theory-panel" id="tab-game-theory" data-tab="game-theory">
+          <i data-lucide="git-branch" aria-hidden="true"></i>
+          <span>Game Theory</span>
+        </button>
+        <button class="methodology-tab" role="tab" aria-selected="false" aria-controls="astrology-panel" id="tab-astrology" data-tab="astrology">
+          <i data-lucide="sparkles" aria-hidden="true"></i>
+          <span>Astrology</span>
+        </button>
+        <button class="methodology-tab" role="tab" aria-selected="false" aria-controls="pattern-panel" id="tab-pattern" data-tab="pattern">
+          <i data-lucide="activity" aria-hidden="true"></i>
+          <span>Pattern Mapping</span>
+        </button>
+        <button class="methodology-tab" role="tab" aria-selected="false" aria-controls="combined-panel" id="tab-combined" data-tab="combined">
+          <i data-lucide="layers" aria-hidden="true"></i>
+          <span>Combined Analysis</span>
+        </button>
+      </div>
+
+      <!-- Tab Contents -->
+      <!-- Game Theory Panel -->
+      <div id="game-theory-panel" class="tab-content is-active" role="tabpanel" aria-labelledby="tab-game-theory">
+        <div class="simulation-panel">
+          <!-- Simulation Controls -->
+          <div class="simulation-controls">
+            <h3 style="font-size: var(--text-h5); margin-bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-2);">
+              <i data-lucide="sliders-horizontal" style="width: 20px; height: 20px;"></i>
+              Simulation Controls
+            </h3>
+
+            <div class="control-group">
+              <label class="control-label">Scenario Type</label>
+              <select class="control-select" id="scenario-type">
+                <option value="conflict">Conflict Escalation</option>
+                <option value="trade">Trade Negotiations</option>
+                <option value="alliance">Alliance Formation</option>
+                <option value="crisis">Crisis Response</option>
+              </select>
+            </div>
+
+            <div class="control-group">
+              <label class="control-label">Time Horizon</label>
+              <select class="control-select" id="time-horizon">
+                <option value="30">30 Days</option>
+                <option value="90" selected>90 Days</option>
+                <option value="180">6 Months</option>
+                <option value="365">1 Year</option>
+              </select>
+            </div>
+
+            <div class="control-group">
+              <label class="control-label">Primary Actors</label>
+              <div class="actor-list" id="actor-list">
+                <div class="actor-item is-selected" data-actor="usa">
+                  <span style="width: 32px; height: 24px; background: linear-gradient(to bottom, #B22234 7.7%, #fff 7.7%, #fff 15.4%, #B22234 15.4%, #B22234 23.1%, #fff 23.1%, #fff 30.8%, #B22234 30.8%, #B22234 38.5%, #fff 38.5%, #fff 46.2%, #B22234 46.2%, #B22234 53.9%, #fff 53.9%, #fff 61.6%, #B22234 61.6%, #B22234 69.3%, #fff 69.3%, #fff 77%, #B22234 77%, #B22234 84.7%, #fff 84.7%, #fff 92.4%, #B22234 92.4%); border-radius: var(--radius-sm);"></span>
+                  <span class="actor-name">United States</span>
+                  <span class="actor-state cooperative" title="Cooperative"></span>
+                </div>
+                <div class="actor-item is-selected" data-actor="china">
+                  <span style="width: 32px; height: 24px; background: #DE2910; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center;">
+                    <span style="color: #FFDE00; font-size: 12px;">★</span>
+                  </span>
+                  <span class="actor-name">China</span>
+                  <span class="actor-state neutral" title="Neutral"></span>
+                </div>
+                <div class="actor-item" data-actor="russia">
+                  <span style="width: 32px; height: 24px; background: linear-gradient(to bottom, #fff 33.3%, #0039A6 33.3%, #0039A6 66.6%, #D52B1E 66.6%); border-radius: var(--radius-sm);"></span>
+                  <span class="actor-name">Russia</span>
+                  <span class="actor-state aggressive" title="Aggressive"></span>
+                </div>
+                <div class="actor-item" data-actor="eu">
+                  <span style="width: 32px; height: 24px; background: #003399; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center;">
+                    <span style="color: #FFCC00; font-size: 8px;">●</span>
+                  </span>
+                  <span class="actor-name">European Union</span>
+                  <span class="actor-state cooperative" title="Cooperative"></span>
+                </div>
+              </div>
+            </div>
+
+            <button class="btn btn-primary" id="run-simulation" style="width: 100%; margin-top: var(--space-4);">
+              <i data-lucide="play" aria-hidden="true"></i>
+              Run Simulation
+            </button>
+
+            <!-- Simulation Progress -->
+            <div class="simulation-progress" id="simulation-progress">
+              <div class="progress-ring">
+                <svg width="80" height="80" viewBox="0 0 80 80">
+                  <circle class="progress-ring__circle" cx="40" cy="40" r="35"/>
+                  <circle class="progress-ring__progress" id="progress-circle" cx="40" cy="40" r="35"/>
+                </svg>
+                <div class="progress-ring__text" id="progress-text">0%</div>
+              </div>
+              <p style="color: var(--color-text-secondary);">Running game theory simulation...</p>
+            </div>
+          </div>
+
+          <!-- Visualization Area -->
+          <div class="visualization-area">
+            <!-- Payoff Matrix -->
+            <div class="viz-card">
+              <div class="viz-card__header">
+                <h4 class="viz-card__title">
+                  <i data-lucide="grid-3x3" aria-hidden="true"></i>
+                  Payoff Matrix
+                </h4>
+                <span class="badge badge--info">Nash Equilibrium Found</span>
+              </div>
+              <div class="payoff-matrix">
+                <div></div>
+                <div class="matrix-header">Cooperate</div>
+                <div class="matrix-header">Neutral</div>
+                <div class="matrix-header">Defect</div>
+
+                <div class="matrix-row-header">Cooperate</div>
+                <div class="matrix-cell is-equilibrium">
+                  <div class="payoff-value">(3, 3)</div>
+                  <div class="payoff-label">Mutual Benefit</div>
+                </div>
+                <div class="matrix-cell">
+                  <div class="payoff-value">(1, 4)</div>
+                  <div class="payoff-label">Exploited</div>
+                </div>
+                <div class="matrix-cell">
+                  <div class="payoff-value">(0, 5)</div>
+                  <div class="payoff-label">Sucker's Payoff</div>
+                </div>
+
+                <div class="matrix-row-header">Neutral</div>
+                <div class="matrix-cell">
+                  <div class="payoff-value">(4, 1)</div>
+                  <div class="payoff-label">Exploiter</div>
+                </div>
+                <div class="matrix-cell">
+                  <div class="payoff-value">(2, 2)</div>
+                  <div class="payoff-label">Status Quo</div>
+                </div>
+                <div class="matrix-cell">
+                  <div class="payoff-value">(1, 3)</div>
+                  <div class="payoff-label">Minor Loss</div>
+                </div>
+
+                <div class="matrix-row-header">Defect</div>
+                <div class="matrix-cell">
+                  <div class="payoff-value">(5, 0)</div>
+                  <div class="payoff-label">Temptation</div>
+                </div>
+                <div class="matrix-cell">
+                  <div class="payoff-value">(3, 1)</div>
+                  <div class="payoff-label">Advantage</div>
+                </div>
+                <div class="matrix-cell">
+                  <div class="payoff-value">(1, 1)</div>
+                  <div class="payoff-label">Mutual Destruction</div>
+                </div>
+              </div>
+
+              <div class="nash-indicator" style="margin-top: var(--space-4);">
+                <i data-lucide="check-circle-2" aria-hidden="true"></i>
+                <div class="nash-indicator__text">
+                  <div class="nash-indicator__title">Nash Equilibrium Detected</div>
+                  <div class="nash-indicator__desc">Both players cooperating yields optimal mutual outcome with 73% stability</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Conflict Probability Chart -->
+            <div class="viz-card">
+              <div class="viz-card__header">
+                <h4 class="viz-card__title">
+                  <i data-lucide="trending-up" aria-hidden="true"></i>
+                  Conflict Probability Over Time
+                </h4>
+                <div style="display: flex; gap: var(--space-2);">
+                  <span class="badge badge--low">Current: 23%</span>
+                  <span class="badge badge--medium">Peak: 67%</span>
+                </div>
+              </div>
+              <div class="chart-container">
+                <canvas id="conflict-probability-chart"></canvas>
+              </div>
+            </div>
+
+            <!-- Scenario Outcomes -->
+            <div class="viz-card">
+              <div class="viz-card__header">
+                <h4 class="viz-card__title">
+                  <i data-lucide="list" aria-hidden="true"></i>
+                  Scenario Outcomes
+                </h4>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: var(--space-3);">
+                <div style="display: flex; align-items: center; gap: var(--space-4); padding: var(--space-3); background: rgba(34, 197, 94, 0.05); border-radius: var(--radius-lg); border-left: 4px solid var(--color-alert-low);">
+                  <div style="font-size: var(--text-h3); font-weight: var(--font-bold); color: var(--color-alert-low);">73%</div>
+                  <div style="flex: 1;">
+                    <div style="font-weight: var(--font-semibold);">Peaceful Resolution</div>
+                    <div style="font-size: var(--text-body-sm); color: var(--color-text-secondary);">Diplomatic channels remain open, mutual agreements reached</div>
+                  </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: var(--space-4); padding: var(--space-3); background: rgba(234, 179, 8, 0.05); border-radius: var(--radius-lg); border-left: 4px solid var(--color-alert-medium);">
+                  <div style="font-size: var(--text-h3); font-weight: var(--font-bold); color: var(--color-alert-medium);">18%</div>
+                  <div style="flex: 1;">
+                    <div style="font-weight: var(--font-semibold);">Tense Standoff</div>
+                    <div style="font-size: var(--text-body-sm); color: var(--color-text-secondary);">Escalation without direct conflict, sanctions applied</div>
+                  </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: var(--space-4); padding: var(--space-3); background: rgba(220, 38, 38, 0.05); border-radius: var(--radius-lg); border-left: 4px solid var(--color-alert-critical);">
+                  <div style="font-size: var(--text-h3); font-weight: var(--font-bold); color: var(--color-alert-critical);">9%</div>
+                  <div style="flex: 1;">
+                    <div style="font-weight: var(--font-semibold);">Military Conflict</div>
+                    <div style="font-size: var(--text-body-sm); color: var(--color-text-secondary);">Direct military engagement, regional instability</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Astrology Panel -->
+      <div id="astrology-panel" class="tab-content" role="tabpanel" aria-labelledby="tab-astrology" hidden>
+        <div class="astrology-calendar">
+          <!-- Calendar Grid -->
+          <div class="calendar-grid">
+            <div class="calendar-header">
+              <div class="calendar-nav">
+                <button aria-label="Previous month"><i data-lucide="chevron-left" style="width: 20px; height: 20px;"></i></button>
+                <span class="calendar-month">January 2024</span>
+                <button aria-label="Next month"><i data-lucide="chevron-right" style="width: 20px; height: 20px;"></i></button>
+              </div>
+              <div style="display: flex; gap: var(--space-2);">
+                <span class="badge badge--info"><i data-lucide="arrow-left-right" style="width: 12px; height: 12px; display: inline;"></i> Retrograde</span>
+                <span class="badge badge--high"><i data-lucide="star" style="width: 12px; height: 12px; display: inline;"></i> Prediction</span>
+              </div>
+            </div>
+            <div class="calendar-days">
+              <div class="calendar-day-header">Sun</div>
+              <div class="calendar-day-header">Mon</div>
+              <div class="calendar-day-header">Tue</div>
+              <div class="calendar-day-header">Wed</div>
+              <div class="calendar-day-header">Thu</div>
+              <div class="calendar-day-header">Fri</div>
+              <div class="calendar-day-header">Sat</div>
+
+              <!-- Calendar days -->
+              <div class="calendar-day" style="opacity: 0.5;"><span class="calendar-day__number">31</span></div>
+              <div class="calendar-day is-today"><span class="calendar-day__number">1</span></div>
+              <div class="calendar-day"><span class="calendar-day__number">2</span></div>
+              <div class="calendar-day"><span class="calendar-day__number">3</span></div>
+              <div class="calendar-day is-retrograde"><span class="calendar-day__number">4</span><div class="calendar-day__marker"><span class="day-marker" style="background: var(--color-alert-high);"></span></div></div>
+              <div class="calendar-day"><span class="calendar-day__number">5</span></div>
+              <div class="calendar-day"><span class="calendar-day__number">6</span></div>
+              <div class="calendar-day"><span class="calendar-day__number">7</span></div>
+              <div class="calendar-day is-prediction"><span class="calendar-day__number">8</span><div class="calendar-day__marker"><span class="day-marker" style="background: var(--color-secondary);"></span></div></div>
+              <div class="calendar-day"><span class="calendar-day__number">9</span></div>
+              <div class="calendar-day"><span class="calendar-day__number">10</span></div>
+              <div class="calendar-day is-retrograde"><span class="calendar-day__number">11</span></div>
+              <div class="calendar-day"><span class="calendar-day__number">12</span></div>
+              <div class="calendar-day"><span class="calendar-day__number">13</span></div>
+              <div class="calendar-day is-prediction"><span class="calendar-day__number">14</span><div class="calendar-day__marker"><span class="day-marker" style="background: var(--color-secondary);"></span><span class="day-marker" style="background: var(--color-alert-high);"></span></div></div>
+              <div class="calendar-day"><span class="calendar-day__number">15</span></div>
+              <div class="calendar-day"><span class="calendar-day__number">16</span></div>
+              <div class="calendar-day"><span class="calendar-day__number">17</span></div>
+              <div class="calendar-day is-retrograde"><span class="calendar-day__number">18</span></div>
+              <div class="calendar-day"><span class="calendar-day__number">19</span></div>
+              <div class="calendar-day"><span class="calendar-day__number">20</span></div>
+              <div class="calendar-day is-prediction"><span class="calendar-day__number">21</span><div class="calendar-day__marker"><span class="day-marker" style="background: var(--color-secondary);"></span></div></div>
+              <div class="calendar-day"><span class="calendar-day__number">22</span></div>
+              <div class="calendar-day"><span class="calendar-day__number">23</span></div>
+              <div class="calendar-day"><span class="calendar-day__number">24</span></div>
+              <div class="calendar-day"><span class="calendar-day__number">25</span></div>
+              <div class="calendar-day"><span class="calendar-day__number">26</span></div>
+              <div class="calendar-day"><span class="calendar-day__number">27</span></div>
+              <div class="calendar-day is-prediction"><span class="calendar-day__number">28</span><div class="calendar-day__marker"><span class="day-marker" style="background: var(--color-secondary);"></span><span class="day-marker" style="background: var(--color-alert-medium);"></span></div></div>
+              <div class="calendar-day"><span class="calendar-day__number">29</span></div>
+              <div class="calendar-day"><span class="calendar-day__number">30</span></div>
+              <div class="calendar-day"><span class="calendar-day__number">31</span></div>
+              <div class="calendar-day" style="opacity: 0.5;"><span class="calendar-day__number">1</span></div>
+              <div class="calendar-day" style="opacity: 0.5;"><span class="calendar-day__number">2</span></div>
+              <div class="calendar-day" style="opacity: 0.5;"><span class="calendar-day__number">3</span></div>
+            </div>
+
+            <!-- Legend -->
+            <div style="display: flex; gap: var(--space-4); margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--color-border);">
+              <div style="display: flex; align-items: center; gap: var(--space-2);">
+                <span style="width: 12px; height: 12px; background: var(--color-primary); border-radius: var(--radius-full);"></span>
+                <span style="font-size: var(--text-caption);">Today</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: var(--space-2);">
+                <span style="width: 12px; height: 12px; background: var(--color-alert-high); border-radius: var(--radius-full);"></span>
+                <span style="font-size: var(--text-caption);">Retrograde</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: var(--space-2);">
+                <span style="width: 12px; height: 12px; background: var(--color-secondary); border-radius: var(--radius-full);"></span>
+                <span style="font-size: var(--text-caption);">Prediction Date</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: var(--space-2);">
+                <span style="width: 12px; height: 12px; background: var(--color-alert-medium); border-radius: var(--radius-full);"></span>
+                <span style="font-size: var(--text-caption);">Major Aspect</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Planetary Positions -->
+          <div class="planetary-positions">
+            <h3 style="font-size: var(--text-h5); margin-bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-2);">
+              <i data-lucide="orbit" style="width: 20px; height: 20px;"></i>
+              Planetary Positions
+            </h3>
+
+            <div class="planet-list">
+              <div class="planet-item">
+                <div class="planet-symbol sun">☉</div>
+                <div class="planet-info">
+                  <div class="planet-name">Sun</div>
+                  <div class="planet-position">Capricorn 10° 23'</div>
+                </div>
+                <span class="planet-aspect positive">Trine Mars</span>
+              </div>
+              <div class="planet-item">
+                <div class="planet-symbol moon">☽</div>
+                <div class="planet-info">
+                  <div class="planet-name">Moon</div>
+                  <div class="planet-position">Taurus 15° 47'</div>
+                </div>
+                <span class="planet-aspect neutral">Void of Course</span>
+              </div>
+              <div class="planet-item">
+                <div class="planet-symbol mercury">☿</div>
+                <div class="planet-info">
+                  <div class="planet-name">Mercury</div>
+                  <div class="planet-position">Sagittarius 28° 12' <span style="color: var(--color-alert-high);">℞</span></div>
+                </div>
+                <span class="planet-aspect challenging">Square Neptune</span>
+              </div>
+              <div class="planet-item">
+                <div class="planet-symbol venus">♀</div>
+                <div class="planet-info">
+                  <div class="planet-name">Venus</div>
+                  <div class="planet-position">Scorpio 22° 05'</div>
+                </div>
+                <span class="planet-aspect positive">Sextile Pluto</span>
+              </div>
+              <div class="planet-item">
+                <div class="planet-symbol mars">♂</div>
+                <div class="planet-info">
+                  <div class="planet-name">Mars</div>
+                  <div class="planet-position">Capricorn 08° 56'</div>
+                </div>
+                <span class="planet-aspect positive">Exalted</span>
+              </div>
+              <div class="planet-item">
+                <div class="planet-symbol jupiter">♃</div>
+                <div class="planet-info">
+                  <div class="planet-name">Jupiter</div>
+                  <div class="planet-position">Taurus 05° 33'</div>
+                </div>
+                <span class="planet-aspect neutral">Stationing</span>
+              </div>
+              <div class="planet-item">
+                <div class="planet-symbol saturn">♄</div>
+                <div class="planet-info">
+                  <div class="planet-name">Saturn</div>
+                  <div class="planet-position">Pisces 02° 18'</div>
+                </div>
+                <span class="planet-aspect challenging">Opposition Node</span>
+              </div>
+            </div>
+
+            <!-- Historical Accuracy -->
+            <div style="margin-top: var(--space-6); padding-top: var(--space-4); border-top: 1px solid var(--color-border);">
+              <h4 style="font-size: var(--text-body); font-weight: var(--font-semibold); margin-bottom: var(--space-3);">Historical Accuracy</h4>
+              <div style="display: flex; align-items: center; gap: var(--space-3);">
+                <div class="progress-circle" style="width: 60px; height: 60px;">
+                  <svg class="progress-circle__svg" width="60" height="60" viewBox="0 0 100 100">
+                    <circle class="progress-circle__track" cx="50" cy="50" r="45"/>
+                    <circle class="progress-circle__fill" cx="50" cy="50" r="45" style="stroke-dashoffset: 85; stroke: var(--color-text-gold);"/>
+                  </svg>
+                  <div class="progress-circle__value" style="font-size: var(--text-caption);">72%</div>
+                </div>
+                <div style="flex: 1;">
+                  <div style="font-size: var(--text-body-sm); color: var(--color-text-secondary);">Based on 156 predictions over 24 months</div>
+                  <div style="font-size: var(--text-caption); color: var(--color-text-muted); margin-top: var(--space-1);">Higher accuracy during eclipse seasons</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Aspect Interpretations -->
+        <div class="viz-card" style="margin-top: var(--space-6);">
+          <div class="viz-card__header">
+            <h4 class="viz-card__title">
+              <i data-lucide="sparkles" aria-hidden="true"></i>
+              Key Aspect Interpretations
+            </h4>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4);">
+            <div style="padding: var(--space-4); background: rgba(34, 197, 94, 0.05); border-radius: var(--radius-lg); border-left: 4px solid var(--color-alert-low);">
+              <div style="font-weight: var(--font-semibold); color: var(--color-alert-low); margin-bottom: var(--space-2);">Sun Trine Mars</div>
+              <div style="font-size: var(--text-body-sm); color: var(--color-text-secondary);">Leadership taking decisive action. Increased confidence in diplomatic initiatives. Favorable for negotiations.</div>
+            </div>
+            <div style="padding: var(--space-4); background: rgba(220, 38, 38, 0.05); border-radius: var(--radius-lg); border-left: 4px solid var(--color-alert-critical);">
+              <div style="font-weight: var(--font-semibold); color: var(--color-alert-critical); margin-bottom: var(--space-2);">Mercury Square Neptune</div>
+              <div style="font-size: var(--text-body-sm); color: var(--color-text-secondary);">Miscommunication risks high. Verify all intelligence. Potential for deception in diplomatic channels.</div>
+            </div>
+            <div style="padding: var(--space-4); background: rgba(234, 179, 8, 0.05); border-radius: var(--radius-lg); border-left: 4px solid var(--color-alert-medium);">
+              <div style="font-weight: var(--font-semibold); color: var(--color-alert-medium); margin-bottom: var(--space-2);">Saturn Opposition Node</div>
+              <div style="font-size: var(--text-body-sm); color: var(--color-text-secondary);">Karmic reckoning for past actions. Structural changes in alliances. Long-term consequences emerge.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pattern Mapping Panel -->
+      <div id="pattern-panel" class="tab-content" role="tabpanel" aria-labelledby="tab-pattern" hidden>
+        <div class="pattern-panel">
+          <!-- Pattern Selector -->
+          <div class="pattern-selector">
+            <h3 style="font-size: var(--text-h5); margin-bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-2);">
+              <i data-lucide="filter" style="width: 20px; height: 20px;"></i>
+              Pattern Types
+            </h3>
+
+            <div class="pattern-type-list">
+              <div class="pattern-type is-active" data-pattern="conflict">
+                <div class="pattern-type__icon" style="background: rgba(220, 38, 38, 0.1); color: var(--color-alert-critical);">
+                  <i data-lucide="sword" aria-hidden="true"></i>
+                </div>
+                <div class="pattern-type__info">
+                  <div class="pattern-type__name">Conflict Escalation</div>
+                  <div class="pattern-type__count">24 historical matches</div>
+                </div>
+                <span class="pattern-confidence high">87%</span>
+              </div>
+
+              <div class="pattern-type" data-pattern="economic">
+                <div class="pattern-type__icon" style="background: rgba(59, 130, 246, 0.1); color: var(--color-alert-info);">
+                  <i data-lucide="trending-down" aria-hidden="true"></i>
+                </div>
+                <div class="pattern-type__info">
+                  <div class="pattern-type__name">Economic Crisis</div>
+                  <div class="pattern-type__count">18 historical matches</div>
+                </div>
+                <span class="pattern-confidence high">82%</span>
+              </div>
+
+              <div class="pattern-type" data-pattern="diplomatic">
+                <div class="pattern-type__icon" style="background: rgba(34, 197, 94, 0.1); color: var(--color-alert-low);">
+                  <i data-lucide="handshake" aria-hidden="true"></i>
+                </div>
+                <div class="pattern-type__info">
+                  <div class="pattern-type__name">Diplomatic Shift</div>
+                  <div class="pattern-type__count">31 historical matches</div>
+                </div>
+                <span class="pattern-confidence medium">68%</span>
+              </div>
+
+              <div class="pattern-type" data-pattern="revolution">
+                <div class="pattern-type__icon" style="background: rgba(249, 115, 22, 0.1); color: var(--color-alert-high);">
+                  <i data-lucide="flame" aria-hidden="true"></i>
+                </div>
+                <div class="pattern-type__info">
+                  <div class="pattern-type__name">Civil Unrest</div>
+                  <div class="pattern-type__count">15 historical matches</div>
+                </div>
+                <span class="pattern-confidence medium">71%</span>
+              </div>
+
+              <div class="pattern-type" data-pattern="alliance">
+                <div class="pattern-type__icon" style="background: rgba(124, 58, 237, 0.1); color: var(--color-secondary);">
+                  <i data-lucide="link" aria-hidden="true"></i>
+                </div>
+                <div class="pattern-type__info">
+                  <div class="pattern-type__name">Alliance Formation</div>
+                  <div class="pattern-type__count">22 historical matches</div>
+                </div>
+                <span class="pattern-confidence high">79%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pattern Visualization -->
+          <div class="pattern-viz">
+            <!-- Pattern Chart -->
+            <div class="pattern-chart-container">
+              <div class="viz-card__header">
+                <h4 class="viz-card__title">
+                  <i data-lucide="activity" aria-hidden="true"></i>
+                  Pattern Trajectory Comparison
+                </h4>
+                <div style="display: flex; gap: var(--space-2);">
+                  <span style="display: flex; align-items: center; gap: var(--space-1); font-size: var(--text-caption);">
+                    <span style="width: 12px; height: 12px; background: var(--color-primary); border-radius: 2px;"></span>
+                    Current
+                  </span>
+                  <span style="display: flex; align-items: center; gap: var(--space-1); font-size: var(--text-caption);">
+                    <span style="width: 12px; height: 12px; background: var(--color-text-muted); border-radius: 2px;"></span>
+                    Historical Average
+                  </span>
+                </div>
+              </div>
+              <div class="chart-container--large">
+                <canvas id="pattern-trajectory-chart"></canvas>
+              </div>
+            </div>
+
+            <!-- Similar Historical Periods -->
+            <div>
+              <h4 style="font-size: var(--text-h5); margin-bottom: var(--space-4);">Similar Historical Periods</h4>
+              <div class="pattern-matches">
+                <div class="pattern-match-card">
+                  <div class="pattern-match-card__period">1962 - Cuban Missile Crisis</div>
+                  <div class="pattern-match-card__title">Cold War Escalation</div>
+                  <div class="pattern-match-card__similarity">
+                    <div class="similarity-bar">
+                      <div class="similarity-fill" style="width: 94%;"></div>
+                    </div>
+                    <span class="similarity-value">94%</span>
+                  </div>
+                </div>
+
+                <div class="pattern-match-card">
+                  <div class="pattern-match-card__period">1914 - July Crisis</div>
+                  <div class="pattern-match-card__title">Pre-WWI Tensions</div>
+                  <div class="pattern-match-card__similarity">
+                    <div class="similarity-bar">
+                      <div class="similarity-fill" style="width: 78%;"></div>
+                    </div>
+                    <span class="similarity-value">78%</span>
+                  </div>
+                </div>
+
+                <div class="pattern-match-card">
+                  <div class="pattern-match-card__period">1938 - Munich Agreement</div>
+                  <div class="pattern-match-card__title">Appeasement Period</div>
+                  <div class="pattern-match-card__similarity">
+                    <div class="similarity-bar">
+                      <div class="similarity-fill" style="width: 65%;"></div>
+                    </div>
+                    <span class="similarity-value">65%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Combined Analysis Panel -->
+      <div id="combined-panel" class="tab-content" role="tabpanel" aria-labelledby="tab-combined" hidden>
+        <div class="combined-grid">
+          <!-- Top Predictions -->
+          <div class="combined-card">
+            <div class="viz-card__header">
+              <h4 class="viz-card__title">
+                <i data-lucide="star" aria-hidden="true"></i>
+                Top Predictions (Next 90 Days)
+              </h4>
+            </div>
+            <div class="prediction-list">
+              <div class="prediction-item">
+                <div class="prediction-item__confidence high">87%</div>
+                <div class="prediction-item__content">
+                  <div class="prediction-item__title">Trade Agreement Signed Between Major Powers</div>
+                  <div class="prediction-item__meta">
+                    <span><i data-lucide="calendar" style="width: 12px; height: 12px; display: inline;"></i> Feb 15-28</span>
+                    <span><i data-lucide="globe" style="width: 12px; height: 12px; display: inline;"></i> Global</span>
+                  </div>
+                  <div class="prediction-item__methods">
+                    <span class="method-badge game-theory">Game Theory</span>
+                    <span class="method-badge pattern">Pattern</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="prediction-item">
+                <div class="prediction-item__confidence high">82%</div>
+                <div class="prediction-item__content">
+                  <div class="prediction-item__title">Regional Military Exercise Announced</div>
+                  <div class="prediction-item__meta">
+                    <span><i data-lucide="calendar" style="width: 12px; height: 12px; display: inline;"></i> Jan 25 - Feb 10</span>
+                    <span><i data-lucide="map-pin" style="width: 12px; height: 12px; display: inline;"></i> Asia-Pacific</span>
+                  </div>
+                  <div class="prediction-item__methods">
+                    <span class="method-badge astrology">Astrology</span>
+                    <span class="method-badge game-theory">Game Theory</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="prediction-item">
+                <div class="prediction-item__confidence medium">71%</div>
+                <div class="prediction-item__content">
+                  <div class="prediction-item__title">Economic Sanctions Adjusted</div>
+                  <div class="prediction-item__meta">
+                    <span><i data-lucide="calendar" style="width: 12px; height: 12px; display: inline;"></i> Mar 1-15</span>
+                    <span><i data-lucide="globe" style="width: 12px; height: 12px; display: inline;"></i> Europe</span>
+                  </div>
+                  <div class="prediction-item__methods">
+                    <span class="method-badge pattern">Pattern</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="prediction-item">
+                <div class="prediction-item__confidence medium">68%</div>
+                <div class="prediction-item__content">
+                  <div class="prediction-item__title">Diplomatic Summit Scheduled</div>
+                  <div class="prediction-item__meta">
+                    <span><i data-lucide="calendar" style="width: 12px; height: 12px; display: inline;"></i> Mar 20-30</span>
+                    <span><i data-lucide="map-pin" style="width: 12px; height: 12px; display: inline;"></i> Middle East</span>
+                  </div>
+                  <div class="prediction-item__methods">
+                    <span class="method-badge game-theory">Game Theory</span>
+                    <span class="method-badge astrology">Astrology</span>
+                    <span class="method-badge pattern">Pattern</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Methodology Agreement -->
+          <div class="combined-card">
+            <div class="viz-card__header">
+              <h4 class="viz-card__title">
+                <i data-lucide="check-circle" aria-hidden="true"></i>
+                Methodology Agreement
+              </h4>
+            </div>
+            <div class="chart-container">
+              <canvas id="methodology-agreement-chart"></canvas>
+            </div>
+            <div style="margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--color-border);">
+              <div style="display: flex; flex-direction: column; gap: var(--space-3);">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <span style="font-size: var(--text-body-sm);">All Methods Agree</span>
+                  <span style="font-weight: var(--font-semibold); color: var(--color-alert-low);">12 predictions</span>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <span style="font-size: var(--text-body-sm);">Two Methods Agree</span>
+                  <span style="font-weight: var(--font-semibold); color: var(--color-alert-medium);">28 predictions</span>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <span style="font-size: var(--text-body-sm);">Single Method Only</span>
+                  <span style="font-weight: var(--font-semibold); color: var(--color-alert-high);">15 predictions</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Confidence Dashboard -->
+      <section class="confidence-dashboard">
+        <div class="confidence-card">
+          <div class="confidence-card__label">Overall Confidence</div>
+          <div class="confidence-card__value" style="color: var(--color-primary);">78%</div>
+          <div class="confidence-card__trend up">
+            <i data-lucide="trending-up" style="width: 16px; height: 16px;"></i>
+            <span>+4% from last month</span>
+          </div>
+        </div>
+
+        <div class="confidence-card">
+          <div class="confidence-card__label">Game Theory</div>
+          <div class="confidence-card__value" style="color: var(--color-primary);">82%</div>
+          <div class="confidence-card__trend up">
+            <i data-lucide="trending-up" style="width: 16px; height: 16px;"></i>
+            <span>+2% from last month</span>
+          </div>
+        </div>
+
+        <div class="confidence-card">
+          <div class="confidence-card__label">Astrology</div>
+          <div class="confidence-card__value" style="color: var(--color-text-gold);">72%</div>
+          <div class="confidence-card__trend up">
+            <i data-lucide="trending-up" style="width: 16px; height: 16px;"></i>
+            <span>+6% from last month</span>
+          </div>
+        </div>
+
+        <div class="confidence-card">
+          <div class="confidence-card__label">Pattern Mapping</div>
+          <div class="confidence-card__value" style="color: var(--color-secondary);">76%</div>
+          <div class="confidence-card__trend down">
+            <i data-lucide="trending-down" style="width: 16px; height: 16px;"></i>
+            <span>-1% from last month</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Historical Accuracy Stats -->
+      <section class="accuracy-section">
+        <h3 style="font-size: var(--text-h4); margin-bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-2);">
+          <i data-lucide="bar-chart-2" style="width: 24px; height: 24px; color: var(--color-primary);"></i>
+          Historical Accuracy Statistics
+        </h3>
+
+        <div class="accuracy-grid">
+          <div class="accuracy-card">
+            <div class="accuracy-card__header">
+              <div class="accuracy-card__icon" style="background: rgba(30, 58, 95, 0.1); color: var(--color-primary);">
+                <i data-lucide="git-branch" aria-hidden="true"></i>
+              </div>
+              <div>
+                <div class="accuracy-card__title">Game Theory</div>
+                <div class="accuracy-card__subtitle">Last 12 months</div>
+              </div>
+            </div>
+            <div class="accuracy-metrics">
+              <div class="accuracy-metric">
+                <span class="accuracy-metric__label">30-Day Predictions</span>
+                <span class="accuracy-metric__value" style="color: var(--color-alert-low);">89%</span>
+              </div>
+              <div class="accuracy-bar">
+                <div class="accuracy-fill" style="width: 89%; background: var(--color-alert-low);"></div>
+              </div>
+
+              <div class="accuracy-metric">
+                <span class="accuracy-metric__label">90-Day Predictions</span>
+                <span class="accuracy-metric__value" style="color: var(--color-alert-medium);">76%</span>
+              </div>
+              <div class="accuracy-bar">
+                <div class="accuracy-fill" style="width: 76%; background: var(--color-alert-medium);"></div>
+              </div>
+
+              <div class="accuracy-metric">
+                <span class="accuracy-metric__label">1-Year Predictions</span>
+                <span class="accuracy-metric__value" style="color: var(--color-alert-high);">64%</span>
+              </div>
+              <div class="accuracy-bar">
+                <div class="accuracy-fill" style="width: 64%; background: var(--color-alert-high);"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="accuracy-card">
+            <div class="accuracy-card__header">
+              <div class="accuracy-card__icon" style="background: rgba(184, 134, 11, 0.1); color: var(--color-text-gold);">
+                <i data-lucide="sparkles" aria-hidden="true"></i>
+              </div>
+              <div>
+                <div class="accuracy-card__title">Astrology</div>
+                <div class="accuracy-card__subtitle">Last 12 months</div>
+              </div>
+            </div>
+            <div class="accuracy-metrics">
+              <div class="accuracy-metric">
+                <span class="accuracy-metric__label">Major Events</span>
+                <span class="accuracy-metric__value" style="color: var(--color-alert-low);">81%</span>
+              </div>
+              <div class="accuracy-bar">
+                <div class="accuracy-fill" style="width: 81%; background: var(--color-alert-low);"></div>
+              </div>
+
+              <div class="accuracy-metric">
+                <span class="accuracy-metric__label">Timing Accuracy</span>
+                <span class="accuracy-metric__value" style="color: var(--color-alert-medium);">68%</span>
+              </div>
+              <div class="accuracy-bar">
+                <div class="accuracy-fill" style="width: 68%; background: var(--color-alert-medium);"></div>
+              </div>
+
+              <div class="accuracy-metric">
+                <span class="accuracy-metric__label">Type Prediction</span>
+                <span class="accuracy-metric__value" style="color: var(--color-alert-medium);">72%</span>
+              </div>
+              <div class="accuracy-bar">
+                <div class="accuracy-fill" style="width: 72%; background: var(--color-alert-medium);"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="accuracy-card">
+            <div class="accuracy-card__header">
+              <div class="accuracy-card__icon" style="background: rgba(124, 58, 237, 0.1); color: var(--color-secondary);">
+                <i data-lucide="activity" aria-hidden="true"></i>
+              </div>
+              <div>
+                <div class="accuracy-card__title">Pattern Mapping</div>
+                <div class="accuracy-card__subtitle">Last 12 months</div>
+              </div>
+            </div>
+            <div class="accuracy-metrics">
+              <div class="accuracy-metric">
+                <span class="accuracy-metric__label">Pattern Detection</span>
+                <span class="accuracy-metric__value" style="color: var(--color-alert-low);">85%</span>
+              </div>
+              <div class="accuracy-bar">
+                <div class="accuracy-fill" style="width: 85%; background: var(--color-alert-low);"></div>
+              </div>
+
+              <div class="accuracy-metric">
+                <span class="accuracy-metric__label">Similarity Match</span>
+                <span class="accuracy-metric__value" style="color: var(--color-alert-medium);">73%</span>
+              </div>
+              <div class="accuracy-bar">
+                <div class="accuracy-fill" style="width: 73%; background: var(--color-alert-medium);"></div>
+              </div>
+
+              <div class="accuracy-metric">
+                <span class="accuracy-metric__label">Outcome Forecast</span>
+                <span class="accuracy-metric__value" style="color: var(--color-alert-high);">67%</span>
+              </div>
+              <div class="accuracy-bar">
+                <div class="accuracy-fill" style="width: 67%; background: var(--color-alert-high);"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+      <div class="footer__container">
+        <div class="footer__main">
+          <div class="footer__brand">
+            <a href="index.html" class="footer__logo">
+              <div class="footer__logo-icon">
+                <svg viewBox="0 0 100 100" width="48" height="48" aria-hidden="true">
+                  <circle cx="50" cy="50" r="45" fill="#7C3AED"/>
+                  <circle cx="50" cy="50" r="35" fill="none" stroke="#FFFFFF" stroke-width="3"/>
+                  <circle cx="50" cy="50" r="15" fill="#FFFFFF"/>
+                </svg>
+              </div>
+              <div class="footer__logo-text">
+                <span class="footer__logo-title">GeoForecast</span>
+                <span class="footer__logo-tagline">Global Threat Intelligence</span>
+              </div>
+            </a>
+            <p class="footer__description">
+              Advanced geopolitical forecasting using game theory, astrological patterns, 
+              and data-driven analytics to provide actionable intelligence for decision makers.
+            </p>
+            <div class="footer__social">
+              <a href="#" class="footer__social-link" aria-label="Twitter"><i data-lucide="twitter" aria-hidden="true"></i></a>
+              <a href="#" class="footer__social-link" aria-label="LinkedIn"><i data-lucide="linkedin" aria-hidden="true"></i></a>
+              <a href="#" class="footer__social-link" aria-label="GitHub"><i data-lucide="github" aria-hidden="true"></i></a>
+              <a href="#" class="footer__social-link" aria-label="RSS Feed"><i data-lucide="rss" aria-hidden="true"></i></a>
+            </div>
+          </div>
+
+          <div class="footer__column">
+            <h3 class="footer__heading">Quick Links</h3>
+            <ul class="footer__links">
+              <li><a href="index.html" class="footer__link">Global Overview</a></li>
+              <li><a href="predictions.html" class="footer__link">Predictions Hub</a></li>
+              <li><a href="timeline.html" class="footer__link">Events Timeline</a></li>
+              <li><a href="alerts.html" class="footer__link">Alert Center</a></li>
+              <li><a href="settings.html" class="footer__link">Settings</a></li>
+            </ul>
+          </div>
+
+          <div class="footer__column">
+            <h3 class="footer__heading">Resources</h3>
+            <ul class="footer__links">
+              <li><a href="#documentation" class="footer__link">Documentation</a></li>
+              <li><a href="#api" class="footer__link">API Reference</a></li>
+              <li><a href="#methodology" class="footer__link">Methodology</a></li>
+              <li><a href="#data-sources" class="footer__link">Data Sources</a></li>
+              <li><a href="#faq" class="footer__link">FAQ</a></li>
+            </ul>
+          </div>
+
+          <div class="footer__column">
+            <h3 class="footer__heading">Contact</h3>
+            <ul class="footer__links">
+              <li><a href="#about" class="footer__link">About Us</a></li>
+              <li><a href="#contact" class="footer__link">Contact Support</a></li>
+              <li><a href="#feedback" class="footer__link">Send Feedback</a></li>
+              <li><a href="#report" class="footer__link">Report an Issue</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="footer__attribution">
+          <div class="footer__attribution-content">
+            <i data-lucide="database" class="footer__attribution-icon" aria-hidden="true"></i>
+            <span class="footer__attribution-text">
+              Data sources: WHO, World Bank, UN, NOAA, USGS, ECDC, and other public health 
+              and safety organizations. Predictions are algorithmic estimates and should not 
+              be considered as definitive forecasts.
+            </span>
+          </div>
+        </div>
+
+        <div class="footer__bottom">
+          <div class="footer__legal">
+            <span class="footer__copyright">&copy; <span id="footer-year">2024</span> GeoForecast. All rights reserved.</span>
+            <nav class="footer__legal-nav" aria-label="Legal links">
+              <a href="#privacy" class="footer__legal-link">Privacy Policy</a>
+              <a href="#terms" class="footer__legal-link">Terms of Service</a>
+              <a href="#cookies" class="footer__legal-link">Cookie Policy</a>
+              <a href="#accessibility" class="footer__legal-link">Accessibility</a>
+            </nav>
+          </div>
+          <div class="footer__version">
+            <span class="footer__version-label">Version</span>
+            <span class="footer__version-number">1.0.0</span>
+            <span class="footer__version-separator">|</span>
+            <span class="footer__build">Build 2024.01.15</span>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </main>
+
+  <script>
+    // Initialize Lucide icons
+    document.addEventListener('DOMContentLoaded', function() {
+      lucide.createIcons();
+
+      // Update copyright year
+      const yearElement = document.getElementById('footer-year');
+      if (yearElement) {
+        yearElement.textContent = new Date().getFullYear();
+      }
+
+      // Initialize all components
+      initTabs();
+      initSimulation();
+      initCharts();
+      initSidebar();
+    });
+
+    // Tab Switching
+    function initTabs() {
+      const tabs = document.querySelectorAll('.methodology-tab');
+      const panels = document.querySelectorAll('.tab-content');
+
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          const targetId = tab.getAttribute('data-tab');
+
+          // Update tab states
+          tabs.forEach(t => {
+            t.classList.remove('is-active');
+            t.setAttribute('aria-selected', 'false');
+          });
+          tab.classList.add('is-active');
+          tab.setAttribute('aria-selected', 'true');
+
+          // Update panel visibility
+          panels.forEach(panel => {
+            panel.classList.remove('is-active');
+            panel.hidden = true;
+          });
+
+          const targetPanel = document.getElementById(targetId + '-panel');
+          if (targetPanel) {
+            targetPanel.classList.add('is-active');
+            targetPanel.hidden = false;
+          }
+
+          // Re-render charts if needed
+          if (targetId === 'game-theory') {
+            setTimeout(() => renderConflictChart(), 100);
+          } else if (targetId === 'pattern') {
+            setTimeout(() => renderPatternChart(), 100);
+          } else if (targetId === 'combined') {
+            setTimeout(() => renderAgreementChart(), 100);
+          }
+        });
+      });
+    }
+
+    // Simulation Controls
+    function initSimulation() {
+      const runBtn = document.getElementById('run-simulation');
+      const progressDiv = document.getElementById('simulation-progress');
+      const progressCircle = document.getElementById('progress-circle');
+      const progressText = document.getElementById('progress-text');
+      const actorItems = document.querySelectorAll('.actor-item');
+
+      // Actor selection
+      actorItems.forEach(item => {
+        item.addEventListener('click', () => {
+          item.classList.toggle('is-selected');
+        });
+      });
+
+      // Run simulation
+      if (runBtn) {
+        runBtn.addEventListener('click', () => {
+          runBtn.disabled = true;
+          progressDiv.classList.add('is-running');
+
+          let progress = 0;
+          const interval = setInterval(() => {
+            progress += Math.random() * 15;
+            if (progress >= 100) {
+              progress = 100;
+              clearInterval(interval);
+
+              setTimeout(() => {
+                progressDiv.classList.remove('is-running');
+                runBtn.disabled = false;
+                // Show success notification
+                showNotification('Simulation complete! Results updated.', 'success');
+              }, 500);
+            }
+
+            const offset = 220 - (220 * progress / 100);
+            if (progressCircle) {
+              progressCircle.style.strokeDashoffset = offset;
+            }
+            if (progressText) {
+              progressText.textContent = Math.round(progress) + '%';
+            }
+          }, 200);
+        });
+      }
+    }
+
+    // Initialize Charts
+    function initCharts() {
+      renderConflictChart();
+    }
+
+    // Conflict Probability Chart
+    function renderConflictChart() {
+      const ctx = document.getElementById('conflict-probability-chart');
+      if (!ctx) return;
+
+      // Destroy existing chart if any
+      if (window.conflictChart) {
+        window.conflictChart.destroy();
+      }
+
+      window.conflictChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5', 'Week 6', 'Week 7', 'Week 8', 'Week 9', 'Week 10', 'Week 11', 'Week 12'],
+          datasets: [{
+            label: 'Conflict Probability',
+            data: [23, 28, 35, 42, 51, 58, 67, 62, 55, 48, 41, 35],
+            borderColor: '#DC2626',
+            backgroundColor: 'rgba(220, 38, 38, 0.1)',
+            fill: true,
+            tension: 0.4,
+            pointRadius: 4,
+            pointBackgroundColor: '#DC2626',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2
+          }, {
+            label: 'Cooperation Probability',
+            data: [65, 58, 48, 38, 28, 22, 18, 24, 32, 42, 51, 58],
+            borderColor: '#22C55E',
+            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+            fill: true,
+            tension: 0.4,
+            pointRadius: 4,
+            pointBackgroundColor: '#22C55E',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            intersect: false,
+            mode: 'index'
+          },
+          plugins: {
+            legend: {
+              position: 'top',
+              align: 'end',
+              labels: {
+                usePointStyle: true,
+                boxWidth: 8
+              }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(26, 26, 46, 0.9)',
+              padding: 12,
+              cornerRadius: 8,
+              displayColors: true
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+              ticks: {
+                callback: function(value) {
+                  return value + '%';
+                }
+              },
+              grid: {
+                color: 'rgba(0, 0, 0, 0.05)'
+              }
+            },
+            x: {
+              grid: {
+                display: false
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Pattern Trajectory Chart
+    function renderPatternChart() {
+      const ctx = document.getElementById('pattern-trajectory-chart');
+      if (!ctx) return;
+
+      if (window.patternChart) {
+        window.patternChart.destroy();
+      }
+
+      window.patternChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['T-12', 'T-11', 'T-10', 'T-9', 'T-8', 'T-7', 'T-6', 'T-5', 'T-4', 'T-3', 'T-2', 'T-1', 'T-0'],
+          datasets: [{
+            label: 'Current Trajectory',
+            data: [15, 22, 28, 35, 42, 48, 55, 62, 68, 72, 75, 78, 80],
+            borderColor: '#1E3A5F',
+            backgroundColor: 'rgba(30, 58, 95, 0.1)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 5,
+            pointBackgroundColor: '#1E3A5F',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2
+          }, {
+            label: 'Historical Average',
+            data: [20, 25, 30, 35, 40, 45, 50, 55, 58, 60, 62, 63, 64],
+            borderColor: '#718096',
+            backgroundColor: 'transparent',
+            borderDash: [5, 5],
+            fill: false,
+            tension: 0.3,
+            pointRadius: 3,
+            pointBackgroundColor: '#718096'
+          }, {
+            label: '1962 Match',
+            data: [18, 24, 32, 40, 48, 55, 62, 68, 72, 75, 77, 78, 79],
+            borderColor: '#7C3AED',
+            backgroundColor: 'transparent',
+            fill: false,
+            tension: 0.3,
+            pointRadius: 3,
+            pointBackgroundColor: '#7C3AED'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            intersect: false,
+            mode: 'index'
+          },
+          plugins: {
+            legend: {
+              position: 'top',
+              align: 'end'
+            },
+            tooltip: {
+              backgroundColor: 'rgba(26, 26, 46, 0.9)',
+              padding: 12,
+              cornerRadius: 8
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+              title: {
+                display: true,
+                text: 'Tension Index'
+              },
+              grid: {
+                color: 'rgba(0, 0, 0, 0.05)'
+              }
+            },
+            x: {
+              title: {
+                display: true,
+                text: 'Time to Event'
+              },
+              grid: {
+                display: false
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Methodology Agreement Chart
+    function renderAgreementChart() {
+      const ctx = document.getElementById('methodology-agreement-chart');
+      if (!ctx) return;
+
+      if (window.agreementChart) {
+        window.agreementChart.destroy();
+      }
+
+      window.agreementChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['All Methods Agree', 'Two Methods Agree', 'Single Method Only'],
+          datasets: [{
+            data: [12, 28, 15],
+            backgroundColor: ['#22C55E', '#EAB308', '#F97316'],
+            borderWidth: 0,
+            hoverOffset: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '60%',
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                usePointStyle: true,
+                padding: 20
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Sidebar functionality
+    function initSidebar() {
+      const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+      const sidebarClose = document.getElementById('sidebar-close');
+      const sidebar = document.getElementById('sidebar');
+      const sidebarOverlay = document.getElementById('sidebar-overlay');
+
+      function openSidebar() {
+        sidebar.classList.add('is-open');
+        sidebarOverlay.classList.add('is-open');
+        mobileMenuToggle.setAttribute('aria-expanded', 'true');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeSidebar() {
+        sidebar.classList.remove('is-open');
+        sidebarOverlay.classList.remove('is-open');
+        mobileMenuToggle.setAttribute('aria-expanded', 'false');
+        document.body.style.overflow = '';
+      }
+
+      if (mobileMenuToggle) {
+        mobileMenuToggle.addEventListener('click', () => {
+          if (sidebar.classList.contains('is-open')) {
+            closeSidebar();
+          } else {
+            openSidebar();
+          }
+        });
+      }
+
+      if (sidebarClose) {
+        sidebarClose.addEventListener('click', closeSidebar);
+      }
+
+      if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', closeSidebar);
+      }
+
+      // Close on escape key
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && sidebar.classList.contains('is-open')) {
+          closeSidebar();
+        }
+      });
+
+      // Close sidebar when clicking nav links on mobile
+      const navLinks = document.querySelectorAll('.sidebar__link');
+      navLinks.forEach(link => {
+        link.addEventListener('click', () => {
+          if (window.innerWidth < 1024) {
+            closeSidebar();
+          }
+        });
+      });
+    }
+
+    // Notification helper
+    function showNotification(message, type = 'info') {
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 16px 24px;
+        background: ${type === 'success' ? '#22C55E' : '#1E3A5F'};
+        color: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        z-index: 1000;
+        animation: slideIn 0.3s ease-out;
+      `;
+      notification.textContent = message;
+      document.body.appendChild(notification);
+
+      setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => notification.remove(), 300);
+      }, 3000);
+    }
+  </script>
+
+  <style>
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideOut {
+      from { transform: translateX(0); opacity: 1; }
+      to { transform: translateX(100%); opacity: 0; }
+    }
+  </style>
+</body>
+</html>
