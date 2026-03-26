@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "name": "geopolitical-forecast-dashboard",
+  "routes": [
+    { "src": "/", "dest": "/index.html" },
+    { "src": "/country", "dest": "/pages/country.html" },
+    { "src": "/city", "dest": "/pages/city.html" },
+    { "src": "/predictions", "dest": "/pages/predictions.html" },
+    { "src": "/timeline", "dest": "/pages/timeline.html" },
+    { "src": "/alerts", "dest": "/pages/alerts.html" },
+    { "src": "/settings", "dest": "/pages/settings.html" },
+    { "src": "/shared/(.*)", "dest": "/shared/$1" },
+    { "src": "/images/(.*)", "dest": "/images/$1" }
+  ],
+  "headers": [
+    {
+      "source": "/shared/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ]
+}
